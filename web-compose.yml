@@ -1,0 +1,14 @@
+services:
+  basesite:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - COOKIE_NAME=user_id
+      - COOKIE_MAX_AGE=2592000
+    expose:
+      - "3000"
+    networks:
+      - web
+    labels:
+      caddy: "basesite.${HOST_SUFFIX:-localhost}"
+      caddy.reverse_proxy: "basesite:3000"
