@@ -17,19 +17,8 @@ export interface FileMetadata {
   uploaded_at?: string;
 }
 
-// Default data structure for basesite
+// Default data structure - allows any keys for AWS console state
 export interface DefaultStateData {
-  examples?: {
-    huggingface_file?: {
-      url: string;
-      note?: string;
-    };
-  };
-  uploads?: FileMetadata[];
-  experiment?: {
-    step: number;
-    status: string;
-  };
   [key: string]: unknown;
 }
 
@@ -75,20 +64,11 @@ export interface InfoResponse {
   request: Record<string, unknown>;
 }
 
-// Default state data with example file reference
-export const HUGGINGFACE_INIT_FILE_URL =
-  "https://huggingface.co/datasets/adlsdztony/osworld-v2/blob/main/email_031.tar.gz";
-
 export function createDefaultStateData(): DefaultStateData {
-  return {
-    examples: {
-      huggingface_file: {
-        url: HUGGINGFACE_INIT_FILE_URL,
-        note: "Initial example file reference (no verification).",
-      },
-    },
-    uploads: [],
-  };
+  // Import the AWS default data at runtime to avoid circular dependencies
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getDefaultData } = require("@/components/aws/store/dataManager");
+  return getDefaultData();
 }
 
 export function createDefaultState(): UserState<DefaultStateData> {

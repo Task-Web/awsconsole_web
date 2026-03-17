@@ -21,6 +21,6 @@ const AwsApp = dynamic(() => import("@/components/aws/AwsApp"), {
   ),
 });
 
-export default function Page() {
+export default function CatchAllPage() {
   return <AwsApp />;
 }

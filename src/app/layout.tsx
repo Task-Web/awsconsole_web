@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Base Experiment Site",
-  description: "Cookie-scoped experiment playground with per-user state management",
+  title: "AWS Console Mock",
+  description: "Cookie-scoped AWS Console mock with per-user state management",
+  icons: {
+    icon: "https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg",
+  },
 };
 
 export default function RootLayout({
@@ -13,6 +16,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );
