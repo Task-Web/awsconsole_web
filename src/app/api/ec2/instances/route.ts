@@ -5,6 +5,7 @@ import {
   launchInstance,
   isDockerAvailable,
 } from "@/lib/docker-client";
+import { getPublicKeyForInjection } from "@/lib/keypair-manager";
 
 // GET /api/ec2/instances - List all instances for current user
 export async function GET(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, amiTag, amiId, amiName, instanceType, platform, tags } =
+    const { name, amiTag, amiId, amiName, instanceType, platform, tags, keyPair } =
       body;
 
     if (!name || !amiTag) {
@@ -47,6 +48,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Look up the public key for the selected key pair
+    let publicKey: string | undefined;
+    if (keyPair) {
+      const pk = getPublicKeyForInjection(userId, keyPair);
+      if (pk) publicKey = pk;
+    }
+
     const instance = await launchInstance(userId, {
       name,
       amiTag,
@@ -55,6 +63,8 @@ export async function POST(request: NextRequest) {
       instanceType: instanceType || "t2.micro",
       platform,
       tags,
+      keyPair: keyPair || undefined,
+      publicKey,
     });
 
     return createResponseWithCookie({ instance }, userId, 201);

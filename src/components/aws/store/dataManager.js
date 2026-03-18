@@ -268,11 +268,8 @@ export const getDefaultData = () => ({
     }
   ],
 
-  keyPairs: [
-    { name: "my-key-pair", id: "key-0abc1234def56789", type: "RSA", fingerprint: "a1:b2:c3:d4:e5:f6:a7:b8:c9:d0:e1:f2:a3:b4:c5:d6", created: "2023-01-10T09:00:00Z" },
-    { name: "deploy-key", id: "key-0def5678abc12345", type: "RSA", fingerprint: "f1:e2:d3:c4:b5:a6:f7:e8:d9:c0:b1:a2:f3:e4:d5:c6", created: "2023-03-15T12:00:00Z" },
-    { name: "dev-key", id: "key-0ghi9012def34567", type: "ED25519", fingerprint: "01:23:45:67:89:ab:cd:ef:01:23:45:67:89:ab:cd:ef", created: "2024-01-05T10:00:00Z" }
-  ],
+  // Key pairs come from real crypto generation via /api/ec2/keypairs
+  keyPairs: [],
 
   // ========================
   // S3

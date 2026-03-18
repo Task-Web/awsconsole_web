@@ -658,6 +658,9 @@ function reducer(prev, action) {
     case 'SET_AMIS':
       newState.amis = action.payload;
       break;
+    case 'SET_KEY_PAIRS':
+      newState.keyPairs = action.payload;
+      break;
 
     default:
       return prev;

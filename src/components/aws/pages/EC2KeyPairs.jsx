@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, X, ChevronDown, Copy } from 'lucide-react';
+import { RefreshCw, Search, X, ChevronDown, Copy, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function EC2KeyPairs() {
@@ -10,33 +10,85 @@ export default function EC2KeyPairs() {
   const [selected, setSelected] = useState([]);
   const [name, setName] = useState('');
   const [keyType, setKeyType] = useState('RSA');
-  const [keyFormat, setKeyFormat] = useState('.pem');
+  const [creating, setCreating] = useState(false);
+
+  // Fetch real key pairs from backend
+  const refreshKeyPairs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ec2/keypairs', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.keyPairs) {
+          dispatch({ type: 'SET_KEY_PAIRS', payload: data.keyPairs });
+        }
+      }
+    } catch { /* ignore */ }
+  }, [dispatch]);
+
+  useEffect(() => {
+    refreshKeyPairs();
+  }, [refreshKeyPairs]);
 
   const kps = (state.keyPairs || []).filter(kp =>
-    !search || kp.name.toLowerCase().includes(search.toLowerCase()) || kp.id.toLowerCase().includes(search.toLowerCase())
+    !search || kp.name.toLowerCase().includes(search.toLowerCase()) || (kp.id || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const toggleSelect = (name) => setSelected(prev => prev.includes(name) ? prev.filter(x => x !== name) : [...prev, name]);
   const toggleAll = () => setSelected(selected.length === kps.length ? [] : kps.map(kp => kp.name));
 
-  const handleCreate = () => {
+  // Create real key pair via API
+  const handleCreate = async () => {
     if (!name.trim()) return;
-    const newKp = {
-      name: name.trim(),
-      id: `key-${Math.random().toString(16).substr(2, 16)}`,
-      type: keyType,
-      fingerprint: Array.from({ length: 16 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':'),
-      created: new Date().toISOString()
-    };
-    dispatch({ type: 'CREATE_KEY_PAIR', payload: newKp });
-    addFlash('success', `Key pair "${name}" created. The private key file (${keyFormat}) has been downloaded.`);
-    setShowCreate(false);
-    setName('');
+    setCreating(true);
+    try {
+      const res = await fetch('/api/ec2/keypairs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: name.trim(), type: keyType }),
+      });
+      const data = await res.json();
+      if (res.ok && data.keyPair) {
+        // Add to store
+        dispatch({ type: 'CREATE_KEY_PAIR', payload: data.keyPair });
+
+        // Download private key as .pem file
+        if (data.privateKey) {
+          const blob = new Blob([data.privateKey], { type: 'application/x-pem-file' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${name.trim()}.pem`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        addFlash('success', `Key pair "${name}" created. The private key file (.pem) has been downloaded. Save it securely — it cannot be downloaded again.`);
+        setShowCreate(false);
+        setName('');
+      } else {
+        addFlash('error', data.error || 'Failed to create key pair');
+      }
+    } catch (e) {
+      addFlash('error', `Failed to create key pair: ${e.message}`);
+    }
+    setCreating(false);
   };
 
-  const handleDelete = () => {
+  // Delete key pair via API
+  const handleDelete = async () => {
     if (!selected.length) return;
-    selected.forEach(name => dispatch({ type: 'DELETE_KEY_PAIR', payload: name }));
+    for (const kpName of selected) {
+      try {
+        await fetch(`/api/ec2/keypairs/${encodeURIComponent(kpName)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        dispatch({ type: 'DELETE_KEY_PAIR', payload: kpName });
+      } catch { /* ignore */ }
+    }
     addFlash('success', `${selected.length} key pair(s) deleted.`);
     setSelected([]);
   };
@@ -50,9 +102,9 @@ export default function EC2KeyPairs() {
     <div>
       <div className="aws-card p-0">
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
-          <h2 className="font-bold text-lg">Key Pairs ({state.keyPairs.length})</h2>
+          <h2 className="font-bold text-lg">Key Pairs ({(state.keyPairs || []).length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100 rounded"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            <button className="p-1.5 hover:bg-gray-100 rounded" onClick={() => { refreshKeyPairs(); addFlash('info', 'Key pairs refreshed'); }}><RefreshCw size={16} className="text-aws-text-secondary" /></button>
             <div className="relative">
               <button className="aws-btn aws-btn-secondary text-xs flex items-center gap-1" disabled={!selected.length}>
                 Actions <ChevronDown size={12} />
@@ -90,10 +142,10 @@ export default function EC2KeyPairs() {
                 </td>
                 <td>{kp.type}</td>
                 <td className="font-mono text-xs text-aws-text-secondary max-w-xs truncate">{kp.fingerprint}</td>
-                <td>{format(new Date(kp.created), 'MMM d, yyyy h:mm a')}</td>
+                <td>{kp.created ? format(new Date(kp.created), 'MMM d, yyyy h:mm a') : '-'}</td>
               </tr>
             ))}
-            {kps.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-aws-text-secondary">No key pairs found</td></tr>}
+            {kps.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-aws-text-secondary">No key pairs found. Create one to use with your instances.</td></tr>}
           </tbody>
         </table>
         <div className="px-4 py-2 border-t border-gray-100 text-xs text-aws-text-secondary">
@@ -124,27 +176,20 @@ export default function EC2KeyPairs() {
                   </label>
                 </div>
               </div>
-              <div>
-                <label className="aws-form-label">Private key file format</label>
-                <div className="flex gap-4 mt-1">
-                  <label className="flex items-center gap-2 text-sm border border-aws-border rounded px-3 py-2 cursor-pointer hover:bg-gray-50">
-                    <input type="radio" checked={keyFormat === '.pem'} onChange={() => setKeyFormat('.pem')} /> .pem
-                    <span className="text-xs text-aws-text-secondary">(OpenSSH)</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm border border-aws-border rounded px-3 py-2 cursor-pointer hover:bg-gray-50">
-                    <input type="radio" checked={keyFormat === '.ppk'} onChange={() => setKeyFormat('.ppk')} /> .ppk
-                    <span className="text-xs text-aws-text-secondary">(PuTTY)</span>
-                  </label>
-                </div>
+              <div className="aws-alert aws-alert-warning text-xs">
+                <Download size={16} className="flex-shrink-0 mt-0.5" />
+                <span>The private key will be downloaded <strong>once</strong> when you create the key pair. Store it securely — you will not be able to download it again.</span>
               </div>
               <div className="aws-alert aws-alert-info text-xs">
                 <svg className="flex-shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                <span>You can use a key pair to securely connect to your instance. Ensure that you save the private key file in a safe place.</span>
+                <span>When you launch an instance with this key pair, the public key is injected into the container. Connect with: <code>ssh -i {name || 'key'}.pem root@IP</code></span>
               </div>
             </div>
             <div className="aws-modal-footer">
               <button className="aws-btn aws-btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
-              <button className="aws-btn aws-btn-primary" onClick={handleCreate} disabled={!name.trim()}>Create key pair</button>
+              <button className="aws-btn aws-btn-primary" onClick={handleCreate} disabled={!name.trim() || creating}>
+                {creating ? 'Creating...' : 'Create key pair'}
+              </button>
             </div>
           </div>
         </div>

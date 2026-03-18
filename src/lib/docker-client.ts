@@ -159,7 +159,7 @@ export async function listInstances(userId: string): Promise<Ec2Instance[]> {
         ami: labels["awsmock.ami_id"] || "",
         amiName: labels["awsmock.ami_name"] || "",
         platform: labels["awsmock.platform"] || "Linux/UNIX",
-        keyPair: "",
+        keyPair: labels["awsmock.key_pair"] || "",
         securityGroups: [],
         launchTime: labels["awsmock.launch_time"] || new Date().toISOString(),
         monitoring: "disabled",
@@ -169,7 +169,11 @@ export async function listInstances(userId: string): Promise<Ec2Instance[]> {
         volumes: [],
         tags: JSON.parse(labels["awsmock.tags"] || "[]"),
         containerId: container.Id,
-        sshCommand: privateIp !== "-" ? `ssh root@${privateIp}` : "",
+        sshCommand: privateIp !== "-"
+          ? labels["awsmock.key_pair"]
+            ? `ssh -i ${labels["awsmock.key_pair"]}.pem root@${privateIp}`
+            : `ssh root@${privateIp}`
+          : "",
         vpcId: "vpc-docker",
         subnetId: "subnet-docker",
       });
@@ -202,6 +206,8 @@ export async function launchInstance(
     instanceType: string;
     platform?: string;
     tags?: { Key: string; Value: string }[];
+    keyPair?: string;
+    publicKey?: string;
   }
 ): Promise<Ec2Instance> {
   // Check user limit
@@ -217,7 +223,19 @@ export async function launchInstance(
   const launchTime = new Date().toISOString();
   const containerName = `awsmock-${userId.substring(0, 8)}-${instanceId}`;
 
-  const container = await docker.createContainer({
+  // Build startup command that injects SSH public key if provided
+  let cmd: string[] | undefined;
+  if (opts.publicKey) {
+    // Inject public key into authorized_keys, then start sshd
+    const escapedKey = opts.publicKey.replace(/'/g, "'\\''");
+    cmd = [
+      "/bin/sh",
+      "-c",
+      `mkdir -p /root/.ssh && chmod 700 /root/.ssh && echo '${escapedKey}' > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys && /usr/sbin/sshd -D`,
+    ];
+  }
+
+  const createOpts: Docker.ContainerCreateOptions = {
     Image: opts.amiTag,
     name: containerName,
     Labels: {
@@ -230,6 +248,7 @@ export async function launchInstance(
       "awsmock.platform": opts.platform || "Linux/UNIX",
       "awsmock.launch_time": launchTime,
       "awsmock.tags": JSON.stringify(opts.tags || []),
+      "awsmock.key_pair": opts.keyPair || "",
       "awsmock.managed": "true",
     },
     HostConfig: {
@@ -237,14 +256,27 @@ export async function launchInstance(
       Memory: limits.memory,
       NetworkMode: EC2_NETWORK,
     },
-  });
+  };
 
+  if (cmd) {
+    createOpts.Cmd = cmd;
+  }
+
+  const container = await docker.createContainer(createOpts);
   await container.start();
 
   // Fetch the container to get its IP
   const info = await container.inspect();
   const privateIp =
     info.NetworkSettings?.Networks?.[EC2_NETWORK]?.IPAddress || "-";
+
+  const keyName = opts.keyPair || "";
+  const sshCmd =
+    privateIp !== "-"
+      ? keyName
+        ? `ssh -i ${keyName}.pem root@${privateIp}`
+        : `ssh root@${privateIp}`
+      : "";
 
   return {
     id: instanceId,
@@ -257,7 +289,7 @@ export async function launchInstance(
     ami: opts.amiId,
     amiName: opts.amiName,
     platform: opts.platform || "Linux/UNIX",
-    keyPair: "",
+    keyPair: keyName,
     securityGroups: [],
     launchTime,
     monitoring: "disabled",
@@ -267,7 +299,7 @@ export async function launchInstance(
     volumes: [],
     tags: opts.tags || [],
     containerId: info.Id,
-    sshCommand: privateIp !== "-" ? `ssh root@${privateIp}` : "",
+    sshCommand: sshCmd,
     vpcId: "vpc-docker",
     subnetId: "subnet-docker",
   };

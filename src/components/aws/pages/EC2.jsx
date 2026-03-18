@@ -54,6 +54,7 @@ export default function EC2() {
   const [launchName, setLaunchName] = useState('');
   const [launchAmi, setLaunchAmi] = useState('');
   const [launchType, setLaunchType] = useState('t2.micro');
+  const [launchKeyPair, setLaunchKeyPair] = useState('');
 
   // Fetch real instances from Docker
   const refreshInstances = useCallback(async () => {
@@ -182,6 +183,7 @@ export default function EC2() {
           instanceType: launchType,
           platform: ami.platform || 'Linux/UNIX',
           tags: [{ Key: 'Name', Value: launchName || 'Unnamed Instance' }],
+          keyPair: launchKeyPair || undefined,
         }),
       });
       const data = await res.json();
@@ -197,7 +199,7 @@ export default function EC2() {
     }
     setLoading(false);
     setView('list');
-    setLaunchName(''); setLaunchType('t2.micro');
+    setLaunchName(''); setLaunchType('t2.micro'); setLaunchKeyPair('');
     setTimeout(refreshInstances, 1000);
   };
 
@@ -258,6 +260,20 @@ export default function EC2() {
               </tbody>
             </table>
           </div>
+          {/* Key Pair */}
+          <div className="aws-card">
+            <h2 className="font-bold text-sm mb-3">Key pair (login)</h2>
+            <p className="text-xs text-aws-text-secondary mb-2">Select a key pair for SSH access. Create one in EC2 → Key Pairs first.</p>
+            <select className="aws-input max-w-md" value={launchKeyPair} onChange={e => setLaunchKeyPair(e.target.value)}>
+              <option value="">Proceed without a key pair (password auth)</option>
+              {(state.keyPairs || []).map(kp => (
+                <option key={kp.name} value={kp.name}>{kp.name} ({kp.type})</option>
+              ))}
+            </select>
+            {!launchKeyPair && (
+              <p className="text-xs text-aws-text-disabled mt-2">Without a key pair, you can still connect using: <code>ssh root@IP</code> (password: <code>password</code>)</p>
+            )}
+          </div>
         </div>
         {/* Summary Sidebar */}
         <div className="w-72 flex-shrink-0">
@@ -268,6 +284,7 @@ export default function EC2() {
               <div><span className="text-aws-text-secondary">Docker image:</span> <span className="font-mono text-xs">{launchAmi || '-'}</span></div>
               <div><span className="text-aws-text-secondary">Instance type:</span> <span className="font-medium">{launchType}</span></div>
               <div><span className="text-aws-text-secondary">Resources:</span> <span className="font-medium">{selectedType.vcpus} vCPU, {selectedType.memory}</span></div>
+              <div><span className="text-aws-text-secondary">Key pair:</span> <span className="font-medium">{launchKeyPair || 'None (password)'}</span></div>
             </div>
             <div className="mt-6 space-y-2">
               <button className="aws-btn aws-btn-call-to-action w-full" onClick={handleLaunch} disabled={loading || !launchAmi || !dockerAvailable}>
