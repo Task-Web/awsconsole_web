@@ -1,106 +1,142 @@
-# Base Experiment Site
+# AWS Console Mock
 
-Cookie-scoped experiment playground built with **Next.js 15**. Each visitor gets an isolated state slice tracked via a cookie; state can be read, replaced, patched, or reset through well-documented APIs and a fully featured UI for experiments.
+A fully interactive AWS Management Console simulation built with **Next.js 15**. Features **real EC2 instances** backed by Docker containers with SSH access, cookie-scoped user isolation, and 14+ AWS service UIs.
 
-## Quick start
-
-```bash
-npm install
-npm run dev
-```
-
-Open http://localhost:3000. The app runs as a unified Next.js application with API routes and frontend in one project.
-
-## Docker compose
+## Quick Start
 
 ```bash
 docker compose up --build
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. The first run builds AMI images (~2 min), subsequent starts are instant.
 
-## Highlights
+## Features
 
-- Per-user state keyed by cookie; no login required.
-- REST endpoints for state lifecycle (`GET/PUT/PATCH/DELETE /api/state`) plus system info and health.
-- You can pin identity via querystring `?cookie=your-id` on any page or API call; the app will set that as the response cookie.
-- Frontend uses Tailwind CSS for styling.
-- Initial state includes an example Hugging Face file URL (no verification).
-- File uploads are stored on the server and referenced by URL.
-- `/state-manage` page with documentation tab and live editor tab (constitutional requirement).
+- **Real EC2 Instances**: Launch creates a Docker container. Stop/start/terminate are real Docker operations. SSH into your instances.
+- **Real SSH Key Pairs**: Cryptographic RSA/ED25519 key generation. Private key downloaded as `.pem`. Public key injected into instances.
+- **Real AMIs**: Docker images matching `awsmock-ami:*` pattern appear as AMIs. Pre-built: Amazon Linux 2023, Ubuntu 22.04.
+- **14+ AWS Services**: EC2, S3, Lambda, RDS, IAM, VPC, CloudWatch, DynamoDB, SNS, SQS, CloudFront, Route 53, CloudTrail, Billing.
+- **Per-User Isolation**: Each visitor gets isolated state via cookie. EC2 containers are labeled per user.
+- **State Reconciliation**: Edit state via `/state-manage` → Docker containers automatically sync.
+- **60+ Routes**: Full navigation with sidebar, search, region selector, notifications.
 
-## Repository layout
+## How EC2 Works
 
 ```
-basesite/
+Launch Instance → Backend creates Docker container → Container gets IP on awsmock-net
+                → SSH ready: ssh -i key.pem root@172.25.x.x
+
+Stop Instance   → docker stop <container>
+Start Instance  → docker start <container>
+Terminate       → docker rm -f <container>
+
+List AMIs       → docker images awsmock-ami:*
+Create Key Pair → crypto.generateKeyPairSync() → .pem downloaded
+```
+
+## Architecture
+
+```
+awsconsole_web/
 ├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── api/             # API routes
-│   │   │   ├── state/       # GET/PUT/PATCH/DELETE /api/state
-│   │   │   ├── info/        # GET /api/info
-│   │   │   └── files/       # POST/GET /api/files, GET /api/files/[filename]
-│   │   ├── health/          # GET /health
-│   │   ├── state-manage/    # State management page (constitutional requirement)
-│   │   ├── layout.tsx       # Root layout
-│   │   ├── page.tsx         # Home page
-│   │   └── globals.css      # Global styles
-│   ├── components/          # React components
-│   │   └── StateEditor.tsx  # Main state editor component
-│   └── lib/                 # Server-side utilities
-│       ├── types.ts         # TypeScript types
-│       ├── state-store.ts   # In-memory state store
-│       ├── file-store.ts    # File upload handling
-│       └── cookies.ts       # Cookie management
-├── uploads/                 # Uploaded files directory
-├── constitution.md          # Core principles and constraints
-├── Dockerfile              # Production Docker build
-├── docker-compose.yml      # Docker compose config
-└── package.json            # Dependencies and scripts
+│   ├── app/                     # Next.js App Router
+│   │   ├── api/
+│   │   │   ├── state/           # GET/PUT/PATCH/DELETE /api/state (+ reconciliation)
+│   │   │   ├── ec2/
+│   │   │   │   ├── instances/   # Launch/list/stop/start/terminate
+│   │   │   │   ├── amis/        # List AMIs from Docker images
+│   │   │   │   └── keypairs/    # Create/list/delete SSH key pairs
+│   │   │   ├── files/           # File upload/download
+│   │   │   └── info/            # System info
+│   │   ├── health/              # Health check
+│   │   ├── state-manage/        # State management UI
+│   │   ├── [...path]/           # Catch-all for SPA routes
+│   │   └── page.tsx             # Root page
+│   ├── components/
+│   │   ├── aws/                 # AWS Console UI
+│   │   │   ├── AwsApp.jsx       # React Router SPA (60+ routes)
+│   │   │   ├── Layout.jsx       # Header, sidebar, navigation
+│   │   │   ├── store/           # StoreContext (reducer) + dataManager (seed data)
+│   │   │   └── pages/           # 53+ page components
+│   │   └── StateEditor.tsx      # State management editor
+│   └── lib/                     # Server-side utilities
+│       ├── docker-client.ts     # Docker API (create/stop/start/rm containers)
+│       ├── ec2-reconciler.ts    # State ↔ Docker sync
+│       ├── keypair-manager.ts   # SSH key generation + storage
+│       ├── state-store.ts       # In-memory state store
+│       ├── cookies.ts           # Cookie-scoped identity
+│       └── file-store.ts        # File uploads
+├── images/                      # AMI Dockerfiles
+│   ├── amazon-linux/Dockerfile  # Amazon Linux 2023 + sshd
+│   └── ubuntu/Dockerfile        # Ubuntu 22.04 + sshd
+├── docker-compose.yml           # App + AMI builder + network
+├── Dockerfile                   # Next.js production build
+└── constitution.md              # Core principles
 ```
 
 ## API Endpoints
 
-See [docs/API.md](docs/API.md) for full API documentation with request/response examples.
-
 ### State Management (cookie-scoped)
 
 - `GET /api/state` - Retrieve current user state
-- `PUT /api/state` - Replace entire state
+- `PUT /api/state` - Replace entire state (triggers EC2 reconciliation)
 - `PATCH /api/state` - Merge into existing state
-- `DELETE /api/state` - Reset and clear state
+- `DELETE /api/state` - Reset state + terminate all EC2 containers
 
-### File Operations
+### EC2 (Docker-backed)
+
+- `GET /api/ec2/amis` - List available AMIs
+- `GET /api/ec2/instances` - List user's instances
+- `POST /api/ec2/instances` - Launch new instance
+- `GET /api/ec2/instances/:id` - Instance details
+- `DELETE /api/ec2/instances/:id` - Terminate instance
+- `POST /api/ec2/instances/:id/start` - Start stopped instance
+- `POST /api/ec2/instances/:id/stop` - Stop running instance
+- `GET /api/ec2/keypairs` - List key pairs
+- `POST /api/ec2/keypairs` - Create key pair (returns private key once)
+- `GET /api/ec2/keypairs/:name` - Key pair details
+- `DELETE /api/ec2/keypairs/:name` - Delete key pair
+
+### Other
 
 - `POST /api/files` - Upload files
 - `GET /api/files` - List user's files
-- `GET /api/files/{filename}` - Download stored file
-
-### System Info
-
-- `GET /api/info` - System and request information
+- `GET /api/files/:filename` - Download file
+- `GET /api/info` - System information
 - `GET /health` - Health check
 
-## Testing
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `COOKIE_NAME` | `user_id` | Cookie name for user identity |
+| `COOKIE_MAX_AGE` | `2592000` (30 days) | Cookie max age in seconds |
+| `EC2_NETWORK` | `awsmock-net` | Docker network for EC2 containers |
+| `EC2_AMI_PATTERN` | `awsmock-ami` | Docker image prefix for AMIs |
+| `EC2_MAX_PER_USER` | `5` | Max EC2 instances per user |
+| `NODE_ENV` | `development` | Node environment |
+
+## Development
 
 ```bash
-npm run test        # Run tests in watch mode
-npm run test:run    # Run tests once
+npm install
+npm run dev          # Start dev server (EC2 features need Docker socket)
+npm run build        # Production build
+npm run lint         # Lint
+npm run test         # Run tests
 ```
 
-## Environment variables
+For EC2 features in dev mode, ensure Docker is running and the `awsmock-net` network exists:
 
-- `COOKIE_NAME` (default `user_id`)
-- `COOKIE_MAX_AGE` (seconds, default 30 days)
-- `NODE_ENV` (development/production)
+```bash
+docker network create awsmock-net
+docker build -t awsmock-ami:amazon-linux-2023 images/amazon-linux/
+docker build -t awsmock-ami:ubuntu-22.04 images/ubuntu/
+```
 
-## Documentation
+## Identity & Isolation
 
-- [docs/STATE.md](docs/STATE.md) - State structure and data schema reference
-- [docs/API.md](docs/API.md) - Complete API endpoint documentation
-
-## Development tips
-
-- Use `npm run lint` for linting.
-- When adding state fields, update the TypeScript types in `src/lib/types.ts` and `docs/STATE.md`.
-- When changing API endpoints (routes, request/response shapes, error codes), update `docs/API.md`.
-- The `/state-manage` page must always be preserved with both documentation and live editor tabs (constitutional requirement).
+- Each user is identified by a `user_id` cookie (auto-generated UUID)
+- Override identity via query parameter: `?cookie=my-custom-id`
+- All state, files, EC2 containers, and key pairs are scoped to the cookie
+- `/state-manage` provides a raw JSON editor for the full state
