@@ -673,7 +673,10 @@ async function syncToBackend(state) {
   try {
     await fetch('/api/state', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-reconcile-skip': 'true',  // Skip reconciliation for frontend auto-sync
+      },
       credentials: 'include',
       body: JSON.stringify({ data: state }),
     });
