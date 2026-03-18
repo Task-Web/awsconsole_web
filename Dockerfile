@@ -38,7 +38,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Create uploads directory
 RUN mkdir -p uploads && chown nextjs:nodejs uploads
 
-USER nextjs
+# Note: Running as root to allow Docker socket access for EC2 container management.
+# In production, consider using a Docker socket proxy for better security.
 
 EXPOSE 3000
 
