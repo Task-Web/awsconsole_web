@@ -9,8 +9,8 @@ RUN yum install -y openssh-server passwd shadow-utils && \
     yum clean all && \
     ssh-keygen -A && \
     echo 'root:password' | chpasswd && \
-    sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/.*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/.*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     mkdir -p /run/sshd
 
 EXPOSE 22
