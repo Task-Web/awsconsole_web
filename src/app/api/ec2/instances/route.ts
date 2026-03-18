@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, amiTag, amiId, amiName, instanceType, platform, tags, keyPair } =
+    const { name, amiTag, amiId, amiName, instanceType, platform, tags, keyPair, region } =
       body;
 
     if (!name || !amiTag) {
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       tags,
       keyPair: keyPair || undefined,
       publicKey,
+      region: region || undefined,
     });
 
     return createResponseWithCookie({ instance }, userId, 201);

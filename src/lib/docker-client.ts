@@ -155,17 +155,17 @@ export async function listInstances(userId: string): Promise<Ec2Instance[]> {
         state: mapContainerState(container.State),
         publicIp: privateIp, // In local Docker, public = private
         privateIp,
-        az: "local-1a",
+        az: labels["awsmock.az"] || "us-east-1a",
         ami: labels["awsmock.ami_id"] || "",
         amiName: labels["awsmock.ami_name"] || "",
         platform: labels["awsmock.platform"] || "Linux/UNIX",
         keyPair: labels["awsmock.key_pair"] || "",
-        securityGroups: [],
+        securityGroups: ["sg-0abc1234def56789"],
         launchTime: labels["awsmock.launch_time"] || new Date().toISOString(),
         monitoring: "disabled",
         iamRole: "",
-        rootDeviceType: "docker",
-        rootDeviceName: "/dev/sda1",
+        rootDeviceType: "ebs",
+        rootDeviceName: "/dev/xvda",
         volumes: [],
         tags: JSON.parse(labels["awsmock.tags"] || "[]"),
         containerId: container.Id,
@@ -174,8 +174,8 @@ export async function listInstances(userId: string): Promise<Ec2Instance[]> {
             ? `ssh -i ${labels["awsmock.key_pair"]}.pem root@${privateIp}`
             : `ssh root@${privateIp}`
           : "",
-        vpcId: "vpc-docker",
-        subnetId: "subnet-docker",
+        vpcId: "vpc-0abc1234def56789",
+        subnetId: "subnet-0def5678abc12345",
       });
     }
 
@@ -208,6 +208,7 @@ export async function launchInstance(
     tags?: { Key: string; Value: string }[];
     keyPair?: string;
     publicKey?: string;
+    region?: string;
   }
 ): Promise<Ec2Instance> {
   // Check user limit
@@ -222,6 +223,8 @@ export async function launchInstance(
   const limits = getResourceLimits(opts.instanceType);
   const launchTime = new Date().toISOString();
   const containerName = `awsmock-${userId.substring(0, 8)}-${instanceId}`;
+  const region = opts.region || "us-east-1";
+  const az = `${region}${["a", "b", "c"][Math.floor(Math.random() * 3)]}`;
 
   // Build startup command that injects SSH public key if provided
   let cmd: string[] | undefined;
@@ -249,6 +252,7 @@ export async function launchInstance(
       "awsmock.launch_time": launchTime,
       "awsmock.tags": JSON.stringify(opts.tags || []),
       "awsmock.key_pair": opts.keyPair || "",
+      "awsmock.az": az,
       "awsmock.managed": "true",
     },
     HostConfig: {
@@ -285,23 +289,23 @@ export async function launchInstance(
     state: "running",
     publicIp: privateIp,
     privateIp,
-    az: "local-1a",
+    az,
     ami: opts.amiId,
     amiName: opts.amiName,
     platform: opts.platform || "Linux/UNIX",
     keyPair: keyName,
-    securityGroups: [],
+    securityGroups: ["sg-0abc1234def56789"],
     launchTime,
     monitoring: "disabled",
     iamRole: "",
-    rootDeviceType: "docker",
-    rootDeviceName: "/dev/sda1",
+    rootDeviceType: "ebs",
+    rootDeviceName: "/dev/xvda",
     volumes: [],
     tags: opts.tags || [],
     containerId: info.Id,
     sshCommand: sshCmd,
-    vpcId: "vpc-docker",
-    subnetId: "subnet-docker",
+    vpcId: "vpc-0abc1234def56789",
+    subnetId: "subnet-0def5678abc12345",
   };
 }
 

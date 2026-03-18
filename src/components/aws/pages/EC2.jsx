@@ -16,12 +16,12 @@ const STATE_COLORS = {
 };
 
 const INSTANCE_TYPES = [
-  { name: 't2.micro', vcpus: 1, memory: '256 MB', storage: 'Docker', network: 'Bridge', free: true },
-  { name: 't2.small', vcpus: 1, memory: '512 MB', storage: 'Docker', network: 'Bridge' },
-  { name: 't3.small', vcpus: 1, memory: '512 MB', storage: 'Docker', network: 'Bridge' },
-  { name: 't3.medium', vcpus: 2, memory: '1 GB', storage: 'Docker', network: 'Bridge' },
-  { name: 'm5.large', vcpus: 2, memory: '1 GB', storage: 'Docker', network: 'Bridge' },
-  { name: 'c5.xlarge', vcpus: 4, memory: '2 GB', storage: 'Docker', network: 'Bridge' },
+  { name: 't2.micro', vcpus: 1, memory: '1 GiB', storage: 'EBS Only', network: 'Low to Moderate', free: true },
+  { name: 't2.small', vcpus: 1, memory: '2 GiB', storage: 'EBS Only', network: 'Low to Moderate' },
+  { name: 't3.small', vcpus: 2, memory: '2 GiB', storage: 'EBS Only', network: 'Up to 5 Gbps' },
+  { name: 't3.medium', vcpus: 2, memory: '4 GiB', storage: 'EBS Only', network: 'Up to 5 Gbps' },
+  { name: 'm5.large', vcpus: 2, memory: '8 GiB', storage: 'EBS Only', network: 'Up to 10 Gbps' },
+  { name: 'c5.xlarge', vcpus: 4, memory: '8 GiB', storage: 'EBS Only', network: 'Up to 10 Gbps' },
 ];
 
 export default function EC2() {
@@ -184,6 +184,7 @@ export default function EC2() {
           platform: ami.platform || 'Linux/UNIX',
           tags: [{ Key: 'Name', Value: launchName || 'Unnamed Instance' }],
           keyPair: launchKeyPair || undefined,
+          region: state.user?.region || 'us-east-1',
         }),
       });
       const data = await res.json();
@@ -203,10 +204,9 @@ export default function EC2() {
     setTimeout(refreshInstances, 1000);
   };
 
-  // Docker not available warning
   const DockerWarning = () => !dockerAvailable ? (
     <div className="aws-alert aws-alert-warning mb-4">
-      <span className="font-bold">Docker not available.</span> EC2 instances require Docker. Make sure the app has access to <code>/var/run/docker.sock</code>.
+      <span className="font-bold">Service unavailable.</span> EC2 compute backend is not reachable. Please try again later.
     </div>
   ) : null;
 
@@ -224,12 +224,10 @@ export default function EC2() {
             <h2 className="font-bold text-sm mb-3">Name and tags</h2>
             <input className="aws-input max-w-md" placeholder="e.g. My Web Server" value={launchName} onChange={e => setLaunchName(e.target.value)} />
           </div>
-          {/* AMI - from real Docker images */}
           <div className="aws-card">
             <h2 className="font-bold text-sm mb-3">Application and OS Images (AMI)</h2>
-            <p className="text-xs text-aws-text-secondary mb-3">Docker images matching <code>awsmock-ami:*</code> pattern</p>
             {realAmis.length === 0 ? (
-              <div className="text-sm text-aws-text-secondary py-4">No AMI images found. Build them with <code>docker compose up ami-builder</code></div>
+              <div className="text-sm text-aws-text-secondary py-4">No AMIs available. Please contact your administrator.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {realAmis.map(ami => (
@@ -237,7 +235,7 @@ export default function EC2() {
                     <div className="font-bold text-sm">{ami.name}</div>
                     <div className="text-xs text-aws-text-secondary mt-1">{ami.description}</div>
                     <div className="text-xs text-aws-text-disabled mt-0.5">{ami.architecture} &middot; {ami.platform}</div>
-                    <div className="text-xs text-green-600 mt-1 font-mono">{ami.imageTag}</div>
+                    <div className="text-xs text-aws-success mt-1 font-medium">Free tier eligible</div>
                   </button>
                 ))}
               </div>
@@ -246,7 +244,7 @@ export default function EC2() {
           {/* Instance Type */}
           <div className="aws-card">
             <h2 className="font-bold text-sm mb-3">Instance type</h2>
-            <p className="text-xs text-aws-text-secondary mb-2">Maps to Docker container resource limits</p>
+            <p className="text-xs text-aws-text-secondary mb-2">Select the hardware configuration for your instance</p>
             <table className="aws-table">
               <thead><tr><th></th><th>Name</th><th>vCPUs</th><th>Memory</th><th>Storage</th><th>Network</th></tr></thead>
               <tbody>
@@ -265,13 +263,13 @@ export default function EC2() {
             <h2 className="font-bold text-sm mb-3">Key pair (login)</h2>
             <p className="text-xs text-aws-text-secondary mb-2">Select a key pair for SSH access. Create one in EC2 → Key Pairs first.</p>
             <select className="aws-input max-w-md" value={launchKeyPair} onChange={e => setLaunchKeyPair(e.target.value)}>
-              <option value="">Proceed without a key pair (password auth)</option>
+              <option value="">Proceed without a key pair (not recommended)</option>
               {(state.keyPairs || []).map(kp => (
                 <option key={kp.name} value={kp.name}>{kp.name} ({kp.type})</option>
               ))}
             </select>
             {!launchKeyPair && (
-              <p className="text-xs text-aws-text-disabled mt-2">Without a key pair, you can still connect using: <code>ssh root@IP</code> (password: <code>password</code>)</p>
+              <p className="text-xs text-aws-text-disabled mt-2">You won't be able to connect to the instance unless you choose an existing key pair or create a new one.</p>
             )}
           </div>
         </div>
@@ -281,7 +279,6 @@ export default function EC2() {
             <h3 className="font-bold text-sm mb-4">Summary</h3>
             <div className="space-y-3 text-sm">
               <div><span className="text-aws-text-secondary">AMI:</span> <span className="font-medium">{selectedAmi.name || 'None selected'}</span></div>
-              <div><span className="text-aws-text-secondary">Docker image:</span> <span className="font-mono text-xs">{launchAmi || '-'}</span></div>
               <div><span className="text-aws-text-secondary">Instance type:</span> <span className="font-medium">{launchType}</span></div>
               <div><span className="text-aws-text-secondary">Resources:</span> <span className="font-medium">{selectedType.vcpus} vCPU, {selectedType.memory}</span></div>
               <div><span className="text-aws-text-secondary">Key pair:</span> <span className="font-medium">{launchKeyPair || 'None (password)'}</span></div>
@@ -307,7 +304,7 @@ export default function EC2() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Instances ({instances.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100 rounded" onClick={() => { refreshInstances(); addFlash('info', 'Instances refreshed from Docker'); }}><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            <button className="p-1.5 hover:bg-gray-100 rounded" onClick={() => { refreshInstances(); addFlash('info', 'Instances refreshed'); }}><RefreshCw size={16} className="text-aws-text-secondary" /></button>
             <ColumnToggle tableName="ec2_instances" columns={EC2_COLUMNS} visibleColumns={visibleCols} onToggle={setVisibleCols} />
           </div>
         </div>
@@ -420,7 +417,7 @@ export default function EC2() {
           {detailTab === 'Details' && (
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
               <div><span className="text-aws-text-secondary">Instance ID:</span> <span className="font-mono ml-2">{selectedInstance.id}</span></div>
-              <div><span className="text-aws-text-secondary">Docker IP:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
+              <div><span className="text-aws-text-secondary">Private IPv4:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
               <div><span className="text-aws-text-secondary">Instance type:</span> <span className="ml-2">{selectedInstance.type}</span></div>
               <div><span className="text-aws-text-secondary">State:</span> <span className="ml-2">{selectedInstance.state}</span></div>
               <div><span className="text-aws-text-secondary">AMI:</span> <span className="ml-2">{selectedInstance.amiName}</span></div>
@@ -449,7 +446,7 @@ export default function EC2() {
                   </div>
                   <div className="text-sm text-aws-text-secondary">
                     <p><strong>Default credentials:</strong> root / password</p>
-                    <p className="mt-1">The instance is accessible via Docker network IP.</p>
+                    <p className="mt-1">The instance is accessible via private IPv4 address.</p>
                   </div>
                 </>
               ) : (
@@ -459,7 +456,7 @@ export default function EC2() {
           )}
           {detailTab === 'Networking' && (
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-              <div><span className="text-aws-text-secondary">Docker Network:</span> <span className="font-mono ml-2">awsmock-net</span></div>
+              <div><span className="text-aws-text-secondary">VPC ID:</span> <span className="font-mono ml-2">{selectedInstance.vpcId}</span></div>
               <div><span className="text-aws-text-secondary">IP Address:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
               <div><span className="text-aws-text-secondary">Availability Zone:</span> <span className="ml-2">{selectedInstance.az}</span></div>
             </div>
