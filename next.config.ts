@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  // Mark dockerode and its dependencies as server-only externals
+  serverExternalPackages: ["dockerode", "docker-modem", "ssh2"],
 };
 
 export default nextConfig;

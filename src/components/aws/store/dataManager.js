@@ -94,70 +94,12 @@ export const getDefaultData = () => ({
   favorites: [],
 
   // ========================
-  // EC2
+  // EC2 - real instances come from Docker containers
   // ========================
-  ec2: [
-    {
-      id: "i-0a1b2c3d4e5f6g7h8", name: "Web-Server-01", type: "t2.micro", state: "running",
-      publicIp: "54.123.45.67", privateIp: "10.0.1.42", az: "us-east-1a",
-      vpcId: "vpc-0abc1234def56789", subnetId: "subnet-0def5678abc12345",
-      ami: "ami-0abcdef1234567890", amiName: "Amazon Linux 2023 AMI", platform: "Linux/UNIX",
-      keyPair: "my-key-pair", securityGroups: ["sg-0abc1234def56789"],
-      launchTime: "2024-03-10T08:30:00Z", monitoring: "disabled",
-      iamRole: "EC2ServiceRole",
-      rootDeviceType: "ebs", rootDeviceName: "/dev/xvda",
-      volumes: ["vol-0a1b2c3d4e5f6g7h8"],
-      tags: [{ Key: "Environment", Value: "Production" }, { Key: "Project", Value: "WebApp" }]
-    },
-    {
-      id: "i-0x9y8z7a6b5c4d3e2", name: "Worker-Node-Alpha", type: "m5.large", state: "stopped",
-      publicIp: "-", privateIp: "10.0.2.18", az: "us-east-1b",
-      vpcId: "vpc-0abc1234def56789", subnetId: "subnet-0ghi9012def34567",
-      ami: "ami-0bcdef2345678901a", amiName: "Ubuntu Server 22.04 LTS", platform: "Linux/UNIX",
-      keyPair: "deploy-key", securityGroups: ["sg-0def5678abc12345"],
-      launchTime: "2024-03-08T14:00:00Z", monitoring: "enabled",
-      iamRole: "EC2ServiceRole",
-      rootDeviceType: "ebs", rootDeviceName: "/dev/sda1",
-      volumes: ["vol-0b2c3d4e5f6g7h9i"],
-      tags: [{ Key: "Environment", Value: "Staging" }, { Key: "Project", Value: "DataPipeline" }]
-    },
-    {
-      id: "i-0f1e2d3c4b5a69870", name: "API-Gateway-Prod", type: "t3.small", state: "running",
-      publicIp: "52.87.123.45", privateIp: "10.0.1.100", az: "us-east-1a",
-      vpcId: "vpc-0abc1234def56789", subnetId: "subnet-0def5678abc12345",
-      ami: "ami-0abcdef1234567890", amiName: "Amazon Linux 2023 AMI", platform: "Linux/UNIX",
-      keyPair: "my-key-pair", securityGroups: ["sg-0abc1234def56789", "sg-0ghi3456jkl78901"],
-      launchTime: "2024-02-28T11:00:00Z", monitoring: "enabled",
-      iamRole: "EC2ServiceRole",
-      rootDeviceType: "ebs", rootDeviceName: "/dev/xvda",
-      volumes: ["vol-0c3d4e5f6g7h8i9j"],
-      tags: [{ Key: "Environment", Value: "Production" }, { Key: "Project", Value: "APIService" }]
-    },
-    {
-      id: "i-0ab12cd34ef567890", name: "Dev-Test-Box", type: "t2.micro", state: "running",
-      publicIp: "3.92.55.12", privateIp: "10.0.3.5", az: "us-east-1c",
-      vpcId: "vpc-0abc1234def56789", subnetId: "subnet-0jkl3456ghi78901",
-      ami: "ami-0bcdef2345678901a", amiName: "Ubuntu Server 22.04 LTS", platform: "Linux/UNIX",
-      keyPair: "dev-key", securityGroups: ["sg-0jkl5678mno12345"],
-      launchTime: "2024-03-14T16:45:00Z", monitoring: "disabled",
-      iamRole: "",
-      rootDeviceType: "ebs", rootDeviceName: "/dev/sda1",
-      volumes: ["vol-0d4e5f6g7h8i9j0k"],
-      tags: [{ Key: "Environment", Value: "Development" }, { Key: "Owner", Value: "dev-team" }]
-    },
-    {
-      id: "i-0cd34ef56gh789012", name: "Batch-Processor", type: "c5.xlarge", state: "running",
-      publicIp: "-", privateIp: "10.0.2.50", az: "us-east-1b",
-      vpcId: "vpc-0abc1234def56789", subnetId: "subnet-0ghi9012def34567",
-      ami: "ami-0abcdef1234567890", amiName: "Amazon Linux 2023 AMI", platform: "Linux/UNIX",
-      keyPair: "deploy-key", securityGroups: ["sg-0def5678abc12345"],
-      launchTime: "2024-03-12T09:00:00Z", monitoring: "enabled",
-      iamRole: "EC2ServiceRole",
-      rootDeviceType: "ebs", rootDeviceName: "/dev/xvda",
-      volumes: ["vol-0e5f6g7h8i9j0k1l"],
-      tags: [{ Key: "Environment", Value: "Production" }, { Key: "Project", Value: "BatchJobs" }]
-    }
-  ],
+  ec2: [],
+
+  // AMIs come from Docker images matching awsmock-ami:* pattern
+  amis: [],
 
   volumes: [
     { id: "vol-0a1b2c3d4e5f6g7h8", name: "Web-Server-01-root", size: 8, volumeType: "gp3", state: "in-use", iops: 3000, throughput: 125, az: "us-east-1a", attachedTo: "i-0a1b2c3d4e5f6g7h8", device: "/dev/xvda", created: "2024-03-10T08:30:00Z", encrypted: true, snapshotId: "snap-0111222333444555" },
@@ -173,14 +115,6 @@ export const getDefaultData = () => ({
     { id: "snap-0111222333444555", name: "web-server-baseline", description: "Baseline snapshot of web server root volume", volumeId: "vol-0a1b2c3d4e5f6g7h8", volumeSize: 8, status: "completed", started: "2024-03-10T09:00:00Z", progress: "100%", encrypted: true, ownerId: "123456789012" },
     { id: "snap-0222333444555666", name: "worker-node-backup", description: "Weekly backup of worker node", volumeId: "vol-0b2c3d4e5f6g7h9i", volumeSize: 30, status: "completed", started: "2024-03-14T02:00:00Z", progress: "100%", encrypted: true, ownerId: "123456789012" },
     { id: "snap-0333444555666777", name: "data-migration-snapshot", description: "Pre-migration snapshot of data volume", volumeId: "vol-0f6g7h8i9j0k1l2m", volumeSize: 100, status: "completed", started: "2024-03-01T06:00:00Z", progress: "100%", encrypted: true, ownerId: "123456789012" },
-  ],
-
-  amis: [
-    { id: "ami-0abcdef1234567890", name: "Amazon Linux 2023 AMI", description: "Amazon Linux 2023 AMI 2023.3.20240312.0", owner: "amazon", state: "available", architecture: "x86_64", platform: "Linux", rootDeviceType: "ebs", virtualization: "hvm", created: "2024-03-12T00:00:00Z", public: true },
-    { id: "ami-0bcdef2345678901a", name: "Ubuntu Server 22.04 LTS", description: "Canonical, Ubuntu, 22.04 LTS, amd64 jammy image build on 2024-03-01", owner: "099720109477", state: "available", architecture: "x86_64", platform: "Linux", rootDeviceType: "ebs", virtualization: "hvm", created: "2024-03-01T00:00:00Z", public: true },
-    { id: "ami-0cdef3456789012ab", name: "Windows Server 2022 Base", description: "Microsoft Windows Server 2022 Full Locale English AMI", owner: "amazon", state: "available", architecture: "x86_64", platform: "Windows", rootDeviceType: "ebs", virtualization: "hvm", created: "2024-02-15T00:00:00Z", public: true },
-    { id: "ami-custom-webapp-v2", name: "WebApp-Golden-Image-v2", description: "Custom AMI with NGINX + Node.js pre-installed", owner: "123456789012", state: "available", architecture: "x86_64", platform: "Linux", rootDeviceType: "ebs", virtualization: "hvm", created: "2024-03-05T14:30:00Z", public: false },
-    { id: "ami-custom-worker-v1", name: "Worker-Base-Image-v1", description: "Custom AMI for batch processing workers", owner: "123456789012", state: "available", architecture: "x86_64", platform: "Linux", rootDeviceType: "ebs", virtualization: "hvm", created: "2024-02-20T10:00:00Z", public: false },
   ],
 
   elasticIps: [

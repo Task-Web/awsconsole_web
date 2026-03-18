@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { RefreshCw, Search, ChevronDown, ChevronUp, X, Terminal } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import ColumnToggle, { useColumnVisibility } from '../ColumnToggle';
@@ -16,26 +16,13 @@ const STATE_COLORS = {
 };
 
 const INSTANCE_TYPES = [
-  { name: 't2.micro', vcpus: 1, memory: 1, storage: 'EBS Only', network: 'Low to Moderate', free: true },
-  { name: 't3.micro', vcpus: 2, memory: 1, storage: 'EBS Only', network: 'Low to Moderate', free: true },
-  { name: 't3.small', vcpus: 2, memory: 2, storage: 'EBS Only', network: 'Low to Moderate' },
-  { name: 't3.medium', vcpus: 2, memory: 4, storage: 'EBS Only', network: 'Low to Moderate' },
-  { name: 'm5.large', vcpus: 2, memory: 8, storage: 'EBS Only', network: 'Up to 10 Gbps' },
-  { name: 'm5.xlarge', vcpus: 4, memory: 16, storage: 'EBS Only', network: 'Up to 10 Gbps' },
-  { name: 'c5.large', vcpus: 2, memory: 4, storage: 'EBS Only', network: 'Up to 10 Gbps' },
+  { name: 't2.micro', vcpus: 1, memory: '256 MB', storage: 'Docker', network: 'Bridge', free: true },
+  { name: 't2.small', vcpus: 1, memory: '512 MB', storage: 'Docker', network: 'Bridge' },
+  { name: 't3.small', vcpus: 1, memory: '512 MB', storage: 'Docker', network: 'Bridge' },
+  { name: 't3.medium', vcpus: 2, memory: '1 GB', storage: 'Docker', network: 'Bridge' },
+  { name: 'm5.large', vcpus: 2, memory: '1 GB', storage: 'Docker', network: 'Bridge' },
+  { name: 'c5.xlarge', vcpus: 4, memory: '2 GB', storage: 'Docker', network: 'Bridge' },
 ];
-
-const AMIS = [
-  { id: 'ami-0abcdef1234567890', name: 'Amazon Linux 2023 AMI', os: 'Amazon Linux', arch: '64-bit (x86)', free: true },
-  { id: 'ami-0bcdef2345678901a', name: 'Ubuntu Server 22.04 LTS', os: 'Ubuntu', arch: '64-bit (x86)', free: true },
-  { id: 'ami-0cdef3456789012ab', name: 'Windows Server 2022 Base', os: 'Windows', arch: '64-bit (x86)', free: true },
-  { id: 'ami-0def4567890123bcd', name: 'Red Hat Enterprise Linux 9', os: 'Red Hat', arch: '64-bit (x86)' },
-  { id: 'ami-0ef56789012345cde', name: 'macOS Ventura 13.6', os: 'macOS', arch: '64-bit (Arm)' },
-  { id: 'ami-0f67890123456def0', name: 'SUSE Linux Enterprise 15', os: 'SUSE', arch: '64-bit (x86)' },
-  { id: 'ami-0089012345678ef01', name: 'Debian 12', os: 'Debian', arch: '64-bit (x86)', free: true },
-];
-
-const getRegionFromAz = (az) => az ? az.replace(/[a-z]$/, '') : '';
 
 export default function EC2() {
   const { state, dispatch, addFlash } = useStore();
@@ -46,6 +33,11 @@ export default function EC2() {
   const [sortDir, setSortDir] = useState('asc');
   const [detailTab, setDetailTab] = useState('Details');
   const [stateDropdown, setStateDropdown] = useState(false);
+  const [dockerAvailable, setDockerAvailable] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // AMIs from Docker images
+  const [realAmis, setRealAmis] = useState([]);
 
   const EC2_COLUMNS = [
     { key: 'name', label: 'Name' },
@@ -60,11 +52,46 @@ export default function EC2() {
 
   // Launch wizard state
   const [launchName, setLaunchName] = useState('');
-  const [launchAmi, setLaunchAmi] = useState(AMIS[0].id);
+  const [launchAmi, setLaunchAmi] = useState('');
   const [launchType, setLaunchType] = useState('t2.micro');
-  const [launchKeyPair, setLaunchKeyPair] = useState(state.keyPairs[0]?.name || '');
-  const [launchStorage, setLaunchStorage] = useState(8);
-  const [launchStorageType, setLaunchStorageType] = useState('gp3');
+
+  // Fetch real instances from Docker
+  const refreshInstances = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ec2/instances', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.instances) {
+          dispatch({ type: 'SET_EC2_INSTANCES', payload: data.instances });
+          setDockerAvailable(true);
+        }
+      } else if (res.status === 503) {
+        setDockerAvailable(false);
+      }
+    } catch {
+      setDockerAvailable(false);
+    }
+  }, [dispatch]);
+
+  // Fetch real AMIs from Docker images
+  const refreshAmis = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ec2/amis', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.amis && data.amis.length > 0) {
+          setRealAmis(data.amis);
+          dispatch({ type: 'SET_AMIS', payload: data.amis });
+          if (!launchAmi) setLaunchAmi(data.amis[0]?.imageTag || '');
+        }
+      }
+    } catch { /* ignore */ }
+  }, [dispatch, launchAmi]);
+
+  useEffect(() => {
+    refreshInstances();
+    refreshAmis();
+  }, [refreshInstances, refreshAmis]);
 
   const userRole = state.user?.role || 'admin';
   const currentRegion = state.user?.region || 'us-east-1';
@@ -75,11 +102,10 @@ export default function EC2() {
     return <AccessDenied service="EC2" region={currentRegion} action="ec2:DescribeInstances" />;
   }
 
-  const instances = state.ec2.filter(i => {
-    if (getRegionFromAz(i.az) !== currentRegion) return false;
+  const instances = (state.ec2 || []).filter(i => {
     if (!filterText) return true;
     const q = filterText.toLowerCase();
-    return i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q) || i.state.toLowerCase().includes(q) || i.type.toLowerCase().includes(q);
+    return (i.name || '').toLowerCase().includes(q) || (i.id || '').toLowerCase().includes(q) || (i.state || '').toLowerCase().includes(q) || (i.type || '').toLowerCase().includes(q);
   }).sort((a, b) => {
     const val = sortDir === 'asc' ? 1 : -1;
     const aVal = a[sortCol] || '';
@@ -99,135 +125,138 @@ export default function EC2() {
     return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
   };
 
-  const handleStateChange = (action) => {
-    selectedIds.forEach(id => {
+  // Real Docker state changes
+  const handleStateChange = async (action) => {
+    for (const id of selectedIds) {
       const inst = state.ec2.find(i => i.id === id);
-      if (!inst) return;
-      if (action === 'start' && inst.state === 'stopped') {
-        dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'pending' } });
-        setTimeout(() => {
-          const ip = `${Math.floor(Math.random()*50)+3}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'running', publicIp: ip } });
-          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'Instance started', message: `${inst.name} (${id}) is now running`, type: 'success', service: 'EC2' } });
-          addFlash('success', `Successfully started instance ${id}`);
-        }, 3000);
-      } else if (action === 'stop' && inst.state === 'running') {
-        dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'stopping' } });
-        setTimeout(() => {
-          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'stopped', publicIp: '-' } });
-          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'Instance stopped', message: `${inst.name} (${id}) has been stopped`, type: 'info', service: 'EC2' } });
-        }, 2000);
-      } else if (action === 'reboot' && inst.state === 'running') {
-        dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'pending' } });
-        setTimeout(() => {
-          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'running' } });
-        }, 2000);
-      } else if (action === 'terminate') {
-        dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'shutting-down' } });
-        setTimeout(() => {
-          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'terminated' } });
+      if (!inst) continue;
+
+      try {
+        if (action === 'start' && inst.state === 'stopped') {
+          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'pending' } });
+          await fetch(`/api/ec2/instances/${id}/start`, { method: 'POST', credentials: 'include' });
+          addFlash('success', `Starting instance ${id}`);
+        } else if (action === 'stop' && inst.state === 'running') {
+          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'stopping' } });
+          await fetch(`/api/ec2/instances/${id}/stop`, { method: 'POST', credentials: 'include' });
+          addFlash('info', `Stopping instance ${id}`);
+        } else if (action === 'terminate') {
+          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'shutting-down' } });
+          await fetch(`/api/ec2/instances/${id}`, { method: 'DELETE', credentials: 'include' });
+          addFlash('warning', `Terminated instance ${id}`);
           dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'Instance terminated', message: `${inst.name} (${id}) has been terminated`, type: 'warning', service: 'EC2' } });
-          setTimeout(() => dispatch({ type: 'TERMINATE_INSTANCE', payload: id }), 5000);
-        }, 3000);
+        } else if (action === 'reboot' && inst.state === 'running') {
+          dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id, state: 'pending' } });
+          await fetch(`/api/ec2/instances/${id}/stop`, { method: 'POST', credentials: 'include' });
+          await fetch(`/api/ec2/instances/${id}/start`, { method: 'POST', credentials: 'include' });
+          addFlash('success', `Rebooting instance ${id}`);
+        }
+      } catch (e) {
+        addFlash('error', `Failed to ${action} instance ${id}: ${e.message}`);
       }
-    });
+    }
     setSelectedIds([]);
     setStateDropdown(false);
+    // Refresh after a short delay
+    setTimeout(refreshInstances, 1000);
   };
 
-  const handleLaunch = () => {
-    const ami = AMIS.find(a => a.id === launchAmi) || AMIS[0];
-    const newId = `i-${Math.random().toString(16).substr(2, 17).padEnd(17, '0')}`;
-    const newInstance = {
-      id: newId,
-      name: launchName || 'Unnamed Instance',
-      type: launchType,
-      state: 'pending',
-      publicIp: '-',
-      privateIp: `10.0.${Math.floor(Math.random()*4)}.${Math.floor(Math.random()*250)+1}`,
-      az: `${state.user.region}${['a','b','c'][Math.floor(Math.random()*3)]}`,
-      vpcId: 'vpc-0abc1234def56789',
-      subnetId: 'subnet-0def5678abc12345',
-      ami: launchAmi,
-      amiName: ami.name,
-      platform: ami.os === 'Windows' ? 'Windows' : 'Linux/UNIX',
-      keyPair: launchKeyPair,
-      securityGroups: ['sg-web-server'],
-      launchTime: new Date().toISOString(),
-      monitoring: 'disabled',
-      tags: [{ Key: 'Name', Value: launchName || 'Unnamed Instance' }]
-    };
-    dispatch({ type: 'LAUNCH_INSTANCE', payload: newInstance });
-    addFlash('success', `Successfully initiated launch of instance ${newId}`);
-    setTimeout(() => {
-      const ip = `${Math.floor(Math.random()*50)+3}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-      dispatch({ type: 'UPDATE_INSTANCE_STATE', payload: { id: newId, state: 'running', publicIp: ip } });
-    }, 3000);
+  // Real Docker launch
+  const handleLaunch = async () => {
+    if (!launchAmi) {
+      addFlash('error', 'Please select an AMI');
+      return;
+    }
+    setLoading(true);
+    try {
+      const ami = realAmis.find(a => a.imageTag === launchAmi) || {};
+      const res = await fetch('/api/ec2/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: launchName || 'Unnamed Instance',
+          amiTag: launchAmi,
+          amiId: ami.id || '',
+          amiName: ami.name || launchAmi,
+          instanceType: launchType,
+          platform: ami.platform || 'Linux/UNIX',
+          tags: [{ Key: 'Name', Value: launchName || 'Unnamed Instance' }],
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.instance) {
+        dispatch({ type: 'LAUNCH_INSTANCE', payload: data.instance });
+        addFlash('success', `Successfully launched instance ${data.instance.id}`);
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'Instance launched', message: `${data.instance.name} (${data.instance.id}) is now running`, type: 'success', service: 'EC2' } });
+      } else {
+        addFlash('error', data.error || 'Failed to launch instance');
+      }
+    } catch (e) {
+      addFlash('error', `Launch failed: ${e.message}`);
+    }
+    setLoading(false);
     setView('list');
-    setLaunchName(''); setLaunchType('t2.micro'); setLaunchAmi(AMIS[0].id); setLaunchStorage(8);
+    setLaunchName(''); setLaunchType('t2.micro');
+    setTimeout(refreshInstances, 1000);
   };
+
+  // Docker not available warning
+  const DockerWarning = () => !dockerAvailable ? (
+    <div className="aws-alert aws-alert-warning mb-4">
+      <span className="font-bold">Docker not available.</span> EC2 instances require Docker. Make sure the app has access to <code>/var/run/docker.sock</code>.
+    </div>
+  ) : null;
 
   // Launch Wizard
   if (view === 'launch') {
-    const selectedAmi = AMIS.find(a => a.id === launchAmi) || AMIS[0];
+    const selectedAmi = realAmis.find(a => a.imageTag === launchAmi) || {};
     const selectedType = INSTANCE_TYPES.find(t => t.name === launchType) || INSTANCE_TYPES[0];
     return (
       <div className="flex gap-6">
         <div className="flex-1 space-y-6">
           <h1 className="text-xl font-bold text-aws-text">Launch an instance</h1>
+          <DockerWarning />
           {/* Name */}
           <div className="aws-card">
             <h2 className="font-bold text-sm mb-3">Name and tags</h2>
             <input className="aws-input max-w-md" placeholder="e.g. My Web Server" value={launchName} onChange={e => setLaunchName(e.target.value)} />
           </div>
-          {/* AMI */}
+          {/* AMI - from real Docker images */}
           <div className="aws-card">
             <h2 className="font-bold text-sm mb-3">Application and OS Images (AMI)</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {AMIS.map(ami => (
-                <button key={ami.id} onClick={() => setLaunchAmi(ami.id)} className={`p-3 border text-left ${launchAmi === ami.id ? 'border-aws-blue bg-aws-blue-light' : 'border-aws-border hover:bg-gray-50'}`} style={{ borderRadius: 8 }}>
-                  <div className="font-bold text-sm">{ami.os}</div>
-                  <div className="text-xs text-aws-text-secondary mt-1">{ami.name}</div>
-                  {ami.free && <div className="text-xs text-aws-success mt-1 font-medium">Free tier eligible</div>}
-                  <div className="text-xs text-aws-text-disabled mt-0.5">{ami.arch}</div>
-                </button>
-              ))}
-            </div>
+            <p className="text-xs text-aws-text-secondary mb-3">Docker images matching <code>awsmock-ami:*</code> pattern</p>
+            {realAmis.length === 0 ? (
+              <div className="text-sm text-aws-text-secondary py-4">No AMI images found. Build them with <code>docker compose up ami-builder</code></div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {realAmis.map(ami => (
+                  <button key={ami.imageTag} onClick={() => setLaunchAmi(ami.imageTag)} className={`p-3 border text-left ${launchAmi === ami.imageTag ? 'border-aws-blue bg-aws-blue-light' : 'border-aws-border hover:bg-gray-50'}`} style={{ borderRadius: 8 }}>
+                    <div className="font-bold text-sm">{ami.name}</div>
+                    <div className="text-xs text-aws-text-secondary mt-1">{ami.description}</div>
+                    <div className="text-xs text-aws-text-disabled mt-0.5">{ami.architecture} &middot; {ami.platform}</div>
+                    <div className="text-xs text-green-600 mt-1 font-mono">{ami.imageTag}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {/* Instance Type */}
           <div className="aws-card">
             <h2 className="font-bold text-sm mb-3">Instance type</h2>
+            <p className="text-xs text-aws-text-secondary mb-2">Maps to Docker container resource limits</p>
             <table className="aws-table">
-              <thead><tr><th></th><th>Name</th><th>vCPUs</th><th>Memory (GiB)</th><th>Storage</th><th>Network</th></tr></thead>
+              <thead><tr><th></th><th>Name</th><th>vCPUs</th><th>Memory</th><th>Storage</th><th>Network</th></tr></thead>
               <tbody>
                 {INSTANCE_TYPES.map(t => (
                   <tr key={t.name} className={`cursor-pointer ${launchType === t.name ? 'bg-orange-50' : ''}`} onClick={() => setLaunchType(t.name)}>
                     <td><input type="radio" checked={launchType === t.name} onChange={() => setLaunchType(t.name)} /></td>
-                    <td className="font-medium">{t.name} {t.free && <span className="text-xs text-aws-success ml-1">Free tier eligible</span>}</td>
+                    <td className="font-medium">{t.name}</td>
                     <td>{t.vcpus}</td><td>{t.memory}</td><td>{t.storage}</td><td>{t.network}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-          {/* Key Pair */}
-          <div className="aws-card">
-            <h2 className="font-bold text-sm mb-3">Key pair (login)</h2>
-            <select className="aws-input max-w-md" value={launchKeyPair} onChange={e => setLaunchKeyPair(e.target.value)}>
-              {state.keyPairs.map(kp => <option key={kp.name} value={kp.name}>{kp.name} ({kp.type})</option>)}
-            </select>
-          </div>
-          {/* Storage */}
-          <div className="aws-card">
-            <h2 className="font-bold text-sm mb-3">Configure storage</h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm">1x</span>
-              <input type="number" className="aws-input w-20" value={launchStorage} onChange={e => setLaunchStorage(Number(e.target.value))} min={1} />
-              <span className="text-sm">GiB</span>
-              <select className="aws-input w-32" value={launchStorageType} onChange={e => setLaunchStorageType(e.target.value)}>
-                <option value="gp2">gp2</option><option value="gp3">gp3</option><option value="io1">io1</option><option value="io2">io2</option>
-              </select>
-            </div>
           </div>
         </div>
         {/* Summary Sidebar */}
@@ -235,13 +264,15 @@ export default function EC2() {
           <div className="aws-card sticky top-4">
             <h3 className="font-bold text-sm mb-4">Summary</h3>
             <div className="space-y-3 text-sm">
-              <div><span className="text-aws-text-secondary">AMI:</span> <span className="font-medium">{selectedAmi.name}</span></div>
+              <div><span className="text-aws-text-secondary">AMI:</span> <span className="font-medium">{selectedAmi.name || 'None selected'}</span></div>
+              <div><span className="text-aws-text-secondary">Docker image:</span> <span className="font-mono text-xs">{launchAmi || '-'}</span></div>
               <div><span className="text-aws-text-secondary">Instance type:</span> <span className="font-medium">{launchType}</span></div>
-              <div><span className="text-aws-text-secondary">Key pair:</span> <span className="font-medium">{launchKeyPair || 'None'}</span></div>
-              <div><span className="text-aws-text-secondary">Storage:</span> <span className="font-medium">{launchStorage} GiB {launchStorageType}</span></div>
+              <div><span className="text-aws-text-secondary">Resources:</span> <span className="font-medium">{selectedType.vcpus} vCPU, {selectedType.memory}</span></div>
             </div>
             <div className="mt-6 space-y-2">
-              <button className="aws-btn aws-btn-call-to-action w-full" onClick={handleLaunch}>Launch instance</button>
+              <button className="aws-btn aws-btn-call-to-action w-full" onClick={handleLaunch} disabled={loading || !launchAmi || !dockerAvailable}>
+                {loading ? 'Launching...' : 'Launch instance'}
+              </button>
               <button className="aws-btn aws-btn-secondary w-full" onClick={() => setView('list')}>Cancel</button>
             </div>
           </div>
@@ -253,12 +284,13 @@ export default function EC2() {
   // Instance List
   return (
     <div className="space-y-0">
+      <DockerWarning />
       <div className="aws-card p-0">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Instances ({instances.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100 rounded" onClick={() => addFlash('info', 'Instances refreshed')}><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            <button className="p-1.5 hover:bg-gray-100 rounded" onClick={() => { refreshInstances(); addFlash('info', 'Instances refreshed from Docker'); }}><RefreshCw size={16} className="text-aws-text-secondary" /></button>
             <ColumnToggle tableName="ec2_instances" columns={EC2_COLUMNS} visibleColumns={visibleCols} onToggle={setVisibleCols} />
           </div>
         </div>
@@ -281,7 +313,7 @@ export default function EC2() {
               </div>
             )}
           </div>
-          <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setView('launch')}>Launch instances</button>
+          <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setView('launch')} disabled={!dockerAvailable}>Launch instances</button>
         </div>
         {/* Filter */}
         <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100">
@@ -362,7 +394,7 @@ export default function EC2() {
       {selectedInstance && (
         <div className="aws-card mt-0 border-t-0">
           <div className="flex gap-4 border-b border-aws-border mb-4">
-            {['Details', 'Security', 'Networking', 'Storage', 'Tags'].map(tab => (
+            {['Details', 'SSH', 'Networking', 'Tags'].map(tab => (
               <button key={tab} onClick={() => setDetailTab(tab)} className={`pb-2 px-1 text-sm font-medium border-b-2 ${detailTab === tab ? 'border-aws-blue text-aws-blue' : 'border-transparent text-aws-text-secondary hover:text-aws-text'}`}>
                 {tab}
               </button>
@@ -371,33 +403,49 @@ export default function EC2() {
           {detailTab === 'Details' && (
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
               <div><span className="text-aws-text-secondary">Instance ID:</span> <span className="font-mono ml-2">{selectedInstance.id}</span></div>
-              <div><span className="text-aws-text-secondary">Public IPv4:</span> <span className="font-mono ml-2">{selectedInstance.publicIp}</span></div>
-              <div><span className="text-aws-text-secondary">Private IPv4:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
+              <div><span className="text-aws-text-secondary">Docker IP:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
               <div><span className="text-aws-text-secondary">Instance type:</span> <span className="ml-2">{selectedInstance.type}</span></div>
+              <div><span className="text-aws-text-secondary">State:</span> <span className="ml-2">{selectedInstance.state}</span></div>
+              <div><span className="text-aws-text-secondary">AMI:</span> <span className="ml-2">{selectedInstance.amiName}</span></div>
               <div><span className="text-aws-text-secondary">AMI ID:</span> <span className="font-mono ml-2">{selectedInstance.ami}</span></div>
-              <div><span className="text-aws-text-secondary">AMI name:</span> <span className="ml-2">{selectedInstance.amiName}</span></div>
-              <div><span className="text-aws-text-secondary">Key pair:</span> <span className="ml-2">{selectedInstance.keyPair}</span></div>
-              <div><span className="text-aws-text-secondary">Launch time:</span> <span className="ml-2">{selectedInstance.launchTime ? format(new Date(selectedInstance.launchTime), 'MMM d, yyyy h:mm a') : '-'}</span></div>
-              <div><span className="text-aws-text-secondary">VPC ID:</span> <span className="font-mono ml-2">{selectedInstance.vpcId}</span></div>
-              <div><span className="text-aws-text-secondary">Subnet ID:</span> <span className="font-mono ml-2">{selectedInstance.subnetId}</span></div>
               <div><span className="text-aws-text-secondary">Platform:</span> <span className="ml-2">{selectedInstance.platform}</span></div>
-              <div><span className="text-aws-text-secondary">Monitoring:</span> <span className="ml-2">{selectedInstance.monitoring}</span></div>
+              <div><span className="text-aws-text-secondary">Launch time:</span> <span className="ml-2">{selectedInstance.launchTime ? format(new Date(selectedInstance.launchTime), 'MMM d, yyyy h:mm a') : '-'}</span></div>
+              {selectedInstance.containerId && (
+                <div className="col-span-2"><span className="text-aws-text-secondary">Container ID:</span> <span className="font-mono ml-2 text-xs">{selectedInstance.containerId}</span></div>
+              )}
             </div>
           )}
-          {detailTab === 'Security' && (
-            <div className="text-sm"><span className="text-aws-text-secondary">Security Groups:</span> <span className="ml-2">{selectedInstance.securityGroups?.join(', ')}</span></div>
+          {detailTab === 'SSH' && (
+            <div className="space-y-4">
+              {selectedInstance.state === 'running' && selectedInstance.sshCommand ? (
+                <>
+                  <div className="aws-alert aws-alert-info">
+                    <Terminal size={16} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-bold">SSH Connection</div>
+                      <div className="mt-1">Connect to this instance using:</div>
+                    </div>
+                  </div>
+                  <div className="aws-code flex items-center justify-between">
+                    <code>{selectedInstance.sshCommand}</code>
+                    <button className="text-xs text-blue-300 hover:text-white ml-4" onClick={() => { navigator.clipboard.writeText(selectedInstance.sshCommand); addFlash('success', 'SSH command copied!'); }}>Copy</button>
+                  </div>
+                  <div className="text-sm text-aws-text-secondary">
+                    <p><strong>Default credentials:</strong> root / password</p>
+                    <p className="mt-1">The instance is accessible via Docker network IP.</p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-aws-text-secondary">Instance must be running to connect via SSH.</div>
+              )}
+            </div>
           )}
           {detailTab === 'Networking' && (
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-              <div><span className="text-aws-text-secondary">VPC ID:</span> <span className="font-mono ml-2">{selectedInstance.vpcId}</span></div>
-              <div><span className="text-aws-text-secondary">Subnet ID:</span> <span className="font-mono ml-2">{selectedInstance.subnetId}</span></div>
-              <div><span className="text-aws-text-secondary">Public IP:</span> <span className="font-mono ml-2">{selectedInstance.publicIp}</span></div>
-              <div><span className="text-aws-text-secondary">Private IP:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
+              <div><span className="text-aws-text-secondary">Docker Network:</span> <span className="font-mono ml-2">awsmock-net</span></div>
+              <div><span className="text-aws-text-secondary">IP Address:</span> <span className="font-mono ml-2">{selectedInstance.privateIp}</span></div>
               <div><span className="text-aws-text-secondary">Availability Zone:</span> <span className="ml-2">{selectedInstance.az}</span></div>
             </div>
-          )}
-          {detailTab === 'Storage' && (
-            <div className="text-sm text-aws-text-secondary">Root device: /dev/xvda (8 GiB, gp3)</div>
           )}
           {detailTab === 'Tags' && (
             <table className="aws-table">

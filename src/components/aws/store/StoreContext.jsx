@@ -649,6 +649,16 @@ function reducer(prev, action) {
     case 'DISMISS_FLASH':
       newState.flash = (prev.flash || []).filter(f => f.id !== action.payload);
       break;
+    // ========================
+    // Bulk state setters (for real Docker sync)
+    // ========================
+    case 'SET_EC2_INSTANCES':
+      newState.ec2 = action.payload;
+      break;
+    case 'SET_AMIS':
+      newState.amis = action.payload;
+      break;
+
     default:
       return prev;
   }

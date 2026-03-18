@@ -3,8 +3,43 @@ services:
     build: .
     ports:
       - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - NODE_ENV=production
       - COOKIE_NAME=user_id
       - COOKIE_MAX_AGE=2592000
+      - EC2_NETWORK=awsmock-net
+      - EC2_AMI_PATTERN=awsmock-ami
+      - EC2_MAX_PER_USER=5
+    networks:
+      - awsmock-net
     restart: unless-stopped
+    depends_on:
+      ami-builder:
+        condition: service_completed_successfully
+
+  # One-shot service that builds AMI images then exits
+  ami-builder:
+    image: docker:cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./images:/images:ro
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Building AMI images..."
+        docker build -t awsmock-ami:amazon-linux-2023 /images/amazon-linux/
+        docker build -t awsmock-ami:ubuntu-22.04 /images/ubuntu/
+        echo "AMI images ready."
+    networks:
+      - awsmock-net
+
+networks:
+  awsmock-net:
+    driver: bridge
+    name: awsmock-net
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
