@@ -10,5 +10,5 @@ services:
     networks:
       - web
     labels:
-      caddy: "basesite.${HOST_SUFFIX:-localhost}"
+      caddy: "${CADDY_SCHEME-http://}basesite.${HOST_SUFFIX:-localhost}"
       caddy.reverse_proxy: "basesite:3000"
