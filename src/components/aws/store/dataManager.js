@@ -1,25 +1,62 @@
+import { COOKIE_NAME } from '@/lib/constants'
+
 const BASE_STORAGE_KEY = 'aws_mock_state';
 const BASE_INITIAL_KEY = 'aws_mock_initialState';
+const SESSION_KEY = 'mock_sid';
 
 export function storageKey(sid) { return sid ? `${BASE_STORAGE_KEY}_${sid}` : BASE_STORAGE_KEY; }
 export function initialKey(sid) { return sid ? `${BASE_INITIAL_KEY}_${sid}` : BASE_INITIAL_KEY; }
 
+const readCookie = (name) => {
+  const prefix = `${encodeURIComponent(name)}=`;
+  const match = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+
+  if (!match) return null;
+
+  const value = match.slice(prefix.length);
+  return value ? decodeURIComponent(value) : null;
+};
+
+export const buildStateUrl = (sid = null) => {
+  const params = new URLSearchParams();
+  if (sid) {
+    params.set('cookie', sid);
+  }
+  const query = params.toString();
+  return `/api/state${query ? `?${query}` : ''}`;
+};
+
 export const getSessionId = () => {
   const params = new URLSearchParams(window.location.search);
-  const urlSid = params.get('sid');
-  if (urlSid) { sessionStorage.setItem('mock_sid', urlSid); return urlSid; }
-  return sessionStorage.getItem('mock_sid') || null;
+  const urlSid = params.get('sid') || params.get('cookie');
+  if (urlSid) {
+    sessionStorage.setItem(SESSION_KEY, urlSid);
+    return urlSid;
+  }
+
+  const cookieSid = readCookie(COOKIE_NAME);
+  if (cookieSid) {
+    sessionStorage.setItem(SESSION_KEY, cookieSid);
+    return cookieSid;
+  }
+
+  return sessionStorage.getItem(SESSION_KEY) || null;
 };
 
 export const fetchCustomState = async (sid = null) => {
   try {
-    const url = sid ? `/state?sid=${encodeURIComponent(sid)}` : '/state';
-    const response = await fetch(url);
+    const url = buildStateUrl(sid);
+    const response = await fetch(url, {
+      credentials: 'include',
+    });
     if (response.ok) {
       const data = await response.json();
-      if (data.has_custom_state && data.stored_state) return data.stored_state;
+      if (data?.state?.data) return data.state.data;
     }
-  } catch (e) { console.log('No custom state available'); }
+  } catch { console.log('No custom state available'); }
   return null;
 };
 

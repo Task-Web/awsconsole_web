@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { COOKIE_NAME, COOKIE_MAX_AGE } from "@/lib/constants";
 
+export function buildRedirectUrlWithoutCookie(url: URL): string {
+  const redirectUrl = new URL(url.toString());
+  redirectUrl.searchParams.delete("cookie");
+
+  const query = redirectUrl.searchParams.toString();
+  return `${redirectUrl.origin}${redirectUrl.pathname}${query ? `?${query}` : ""}${redirectUrl.hash}`;
+}
+
 /**
  * Applies cookie override from query parameter (constitutional requirement).
  * If ?cookie=<value> is present, sets the cookie and redirects to clean URL.
@@ -21,7 +29,7 @@ function applyCookieFromQuery(): boolean {
   }
   document.cookie = cookie;
 
-  const redirectUrl = url.origin + url.pathname;
+  const redirectUrl = buildRedirectUrlWithoutCookie(url);
   if (window.location.href !== redirectUrl) {
     window.location.replace(redirectUrl);
     return true;
