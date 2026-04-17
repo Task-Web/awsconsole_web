@@ -1,5 +1,5 @@
 services:
-  basesite:
+  awsconsole:
     build: .
     environment:
       - NODE_ENV=production
@@ -10,5 +10,5 @@ services:
     networks:
       - web
     labels:
-      caddy: "basesite.${HOST_SUFFIX:-localhost}"
-      caddy.reverse_proxy: "basesite:3000"
+      caddy: "awsconsole.${HOST_SUFFIX:-localhost}"
+      caddy.reverse_proxy: "awsconsole:3000"
