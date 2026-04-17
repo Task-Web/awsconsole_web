@@ -1,54 +1,14 @@
-import { COOKIE_NAME } from '@/lib/constants'
-
 const BASE_STORAGE_KEY = 'aws_mock_state';
 const BASE_INITIAL_KEY = 'aws_mock_initialState';
-const SESSION_KEY = 'mock_sid';
 
-export function storageKey(sid) { return sid ? `${BASE_STORAGE_KEY}_${sid}` : BASE_STORAGE_KEY; }
-export function initialKey(sid) { return sid ? `${BASE_INITIAL_KEY}_${sid}` : BASE_INITIAL_KEY; }
+export function storageKey() { return BASE_STORAGE_KEY; }
+export function initialKey() { return BASE_INITIAL_KEY; }
 
-const readCookie = (name) => {
-  const prefix = `${encodeURIComponent(name)}=`;
-  const match = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix));
+export const buildStateUrl = () => '/api/state';
 
-  if (!match) return null;
-
-  const value = match.slice(prefix.length);
-  return value ? decodeURIComponent(value) : null;
-};
-
-export const buildStateUrl = (sid = null) => {
-  const params = new URLSearchParams();
-  if (sid) {
-    params.set('cookie', sid);
-  }
-  const query = params.toString();
-  return `/api/state${query ? `?${query}` : ''}`;
-};
-
-export const getSessionId = () => {
-  const params = new URLSearchParams(window.location.search);
-  const urlSid = params.get('sid') || params.get('cookie');
-  if (urlSid) {
-    sessionStorage.setItem(SESSION_KEY, urlSid);
-    return urlSid;
-  }
-
-  const cookieSid = readCookie(COOKIE_NAME);
-  if (cookieSid) {
-    sessionStorage.setItem(SESSION_KEY, cookieSid);
-    return cookieSid;
-  }
-
-  return sessionStorage.getItem(SESSION_KEY) || null;
-};
-
-export const fetchCustomState = async (sid = null) => {
+export const fetchCustomState = async () => {
   try {
-    const url = buildStateUrl(sid);
+    const url = buildStateUrl();
     const response = await fetch(url, {
       credentials: 'include',
     });
@@ -60,12 +20,12 @@ export const fetchCustomState = async (sid = null) => {
   return null;
 };
 
-export const saveState = (state, sid = null) => {
-  localStorage.setItem(storageKey(sid), JSON.stringify(state));
+export const saveState = (state) => {
+  localStorage.setItem(storageKey(), JSON.stringify(state));
 };
 
-export const getInitialState = (sid = null) => {
-  const stored = localStorage.getItem(initialKey(sid));
+export const getInitialState = () => {
+  const stored = localStorage.getItem(initialKey());
   return stored ? JSON.parse(stored) : null;
 };
 
@@ -84,9 +44,9 @@ function deepMergeWithDefaults(defaults, custom) {
   return result;
 }
 
-export const initializeData = (sid = null, customState = null) => {
-  const sk = storageKey(sid);
-  const ik = initialKey(sid);
+export const initializeData = (customState = null) => {
+  const sk = storageKey();
+  const ik = initialKey();
 
   if (customState) {
     const data = deepMergeWithDefaults(getDefaultData(), customState);
