@@ -10,5 +10,5 @@ services:
     networks:
       - web
     labels:
-      caddy: "awsconsole.${HOST_SUFFIX:-localhost}"
+      caddy: "${CADDY_SCHEME-http://}awsconsole.${HOST_SUFFIX:-localhost}"
       caddy.reverse_proxy: "awsconsole:3000"
