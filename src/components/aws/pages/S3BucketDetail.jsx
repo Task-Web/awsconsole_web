@@ -84,7 +84,7 @@ export default function S3BucketDetail() {
     }, 1500);
   };
 
-  const tabs = ['Objects', 'Properties', 'Permissions', 'Metrics', 'Management'];
+  const tabs = ['Objects', 'Properties', 'Permissions'];
 
   return (
     <div className="space-y-0">
@@ -286,9 +286,6 @@ export default function S3BucketDetail() {
           </div>
         )}
 
-        {!['Objects', 'Properties', 'Permissions'].includes(tab) && (
-          <div className="p-8 text-center text-aws-text-secondary">Feature coming soon</div>
-        )}
       </div>
 
       {/* Upload Modal */}

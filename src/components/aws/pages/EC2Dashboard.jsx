@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../store/StoreContext.jsx';
 import { Link } from 'react-router-dom';
-import { RefreshCw, ExternalLink, CheckCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle } from 'lucide-react';
 
 export default function EC2Dashboard() {
   const { state } = useStore();
@@ -17,28 +17,13 @@ export default function EC2Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Info banner */}
-      <div className="aws-card flex items-center justify-between" style={{ borderLeft: '4px solid #0972D3' }}>
-        <div className="flex items-center gap-3">
-          <svg width="20" height="20" viewBox="0 0 20 20" className="text-aws-blue flex-shrink-0">
-            <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <text x="10" y="14" textAnchor="middle" fill="currentColor" fontSize="12" fontWeight="bold">i</text>
-          </svg>
-          <span className="text-sm">You can change your default landing page for EC2.</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="text-sm text-aws-blue hover:underline">Permanently dismiss</button>
-          <button className="aws-btn aws-btn-primary text-xs">Change landing page</button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-3 gap-6">
         {/* Resources */}
         <div className="col-span-2">
           <div className="aws-card">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-lg">Resources</h2>
-              <button className="p-1.5 hover:bg-gray-100 rounded"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+              
             </div>
             <p className="text-sm text-aws-text-secondary mb-4">
               You are using the following Amazon EC2 resources in the {state.user.region === 'ap-southeast-1' ? 'Asia Pacific (Singapore)' : state.user.region} Region:
@@ -113,11 +98,6 @@ export default function EC2Dashboard() {
           <div className="aws-card">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm">EC2 cost</h3>
-              <button className="p-1 hover:bg-gray-100 rounded">
-                <svg width="14" height="14" viewBox="0 0 14 14" className="text-aws-text-secondary">
-                  <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                </svg>
-              </button>
             </div>
             <div className="text-sm text-aws-text-secondary mb-2">Date range: Past 6 months</div>
             <div className="text-sm text-aws-text-secondary mb-1">Region: Global</div>

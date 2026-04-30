@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { Folder, RefreshCw, Search, X, Copy, Settings } from 'lucide-react';
+import { Folder, Search, X, Copy, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 

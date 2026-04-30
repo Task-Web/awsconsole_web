@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, X, HardDrive } from 'lucide-react';
+import { Search, X, HardDrive } from 'lucide-react';
 import { format } from 'date-fns';
 import AccessDenied from '../AccessDenied';
 
@@ -70,7 +70,7 @@ export default function EC2Volumes() {
               <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
               <input className="aws-input pl-7 text-sm w-56" placeholder="Search volumes..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             <button className="aws-btn aws-btn-secondary text-xs" disabled={!selected.length} onClick={handleDetach}>Detach</button>
             <button className="aws-btn aws-btn-secondary text-xs text-red-600" disabled={!selected.length} onClick={handleDelete}>Delete</button>
             <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}>Create volume</button>

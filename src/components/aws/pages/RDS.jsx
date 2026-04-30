@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Database } from 'lucide-react';
+import { Database } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const STATUS_COLORS = {
@@ -180,7 +180,7 @@ export default function RDS() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
         <h2 className="font-bold text-lg">Databases ({state.rds.length})</h2>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+          
           <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}>Create database</button>
         </div>
       </div>

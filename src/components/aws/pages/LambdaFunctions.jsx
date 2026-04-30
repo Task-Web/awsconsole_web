@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { RefreshCw, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 const RUNTIMES = ['nodejs18.x', 'nodejs20.x', 'python3.12', 'python3.11', 'java17', 'java21', 'go1.x', 'dotnet8'];
@@ -116,7 +116,7 @@ export default function LambdaFunctions() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
         <h2 className="font-bold text-lg">Functions ({state.lambda.length})</h2>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+          
           <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}>Create function</button>
         </div>
       </div>

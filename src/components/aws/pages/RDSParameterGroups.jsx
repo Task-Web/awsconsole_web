@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, ChevronDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export default function RDSParameterGroups() {
   const { state } = useStore();
@@ -46,9 +46,8 @@ export default function RDSParameterGroups() {
               <div><span className="text-aws-text-secondary font-medium block">Description</span>{detailGroup.description || '-'}</div>
             </div>
           </div>
-          <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-4 py-2 border-b border-gray-100">
             <h3 className="font-bold text-sm">Parameters</h3>
-            <button className="aws-btn aws-btn-secondary text-xs">Edit parameters</button>
           </div>
           <table className="aws-table">
             <thead><tr><th>Parameter name</th><th>Value</th><th>Type</th><th>Apply type</th><th>Modifiable</th></tr></thead>
@@ -76,11 +75,6 @@ export default function RDSParameterGroups() {
     <div className="aws-card p-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
         <h2 className="font-bold text-lg">Parameter groups ({paramGroups.length})</h2>
-        <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-gray-100 rounded"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
-          <button className="aws-btn aws-btn-secondary text-xs" disabled={!selected.length || selected.some(n => { const g = paramGroups.find(x => x.name === n); return !g || g.type !== 'Custom'; })}>Delete</button>
-          <button className="aws-btn aws-btn-call-to-action text-xs">Create parameter group</button>
-        </div>
       </div>
       <div className="px-4 py-2 border-b border-gray-100">
         <div className="relative max-w-sm">

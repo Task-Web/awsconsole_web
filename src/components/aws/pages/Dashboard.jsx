@@ -40,10 +40,6 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">
           Console Home <span className="text-aws-blue text-sm font-normal ml-2 cursor-pointer hover:underline">Info</span>
         </h1>
-        <div className="flex items-center gap-2">
-          <button className="aws-btn aws-btn-secondary text-xs">Reset to default layout</button>
-          <button className="aws-btn aws-btn-call-to-action text-xs">+ Add widgets</button>
-        </div>
       </div>
 
       {/* Main grid - matches real AWS Console Home layout */}

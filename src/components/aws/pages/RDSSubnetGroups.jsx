@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw } from 'lucide-react';
 
 export default function RDSSubnetGroups() {
   const { state } = useStore();
@@ -44,7 +43,7 @@ export default function RDSSubnetGroups() {
     <div className="aws-card p-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
         <h2 className="font-bold text-lg">Subnet groups ({subnetGroups.length})</h2>
-        <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+        
       </div>
       <table className="aws-table">
         <thead><tr><th>Name</th><th>Description</th><th>VPC</th><th>Status</th><th>Subnets</th></tr></thead>

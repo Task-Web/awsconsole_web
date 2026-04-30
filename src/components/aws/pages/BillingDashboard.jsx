@@ -17,11 +17,6 @@ export default function BillingDashboard() {
         <h1 className="text-xl font-bold">
           Billing and Cost Management home <span className="text-aws-blue text-xs font-normal ml-1 cursor-pointer hover:underline">Info</span>
         </h1>
-        <div className="flex items-center gap-2">
-          <button className="aws-btn aws-btn-secondary text-xs">Provide feedback</button>
-          <button className="aws-btn aws-btn-secondary text-xs flex items-center gap-1">Need Help? Ask Q <svg width="10" height="10" viewBox="0 0 10 10" className="text-aws-text-secondary"><circle cx="5" cy="5" r="4" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg></button>
-          <button className="aws-btn aws-btn-link text-xs">Reset layout</button>
-        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-6">

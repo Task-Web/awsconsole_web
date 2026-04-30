@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, X, Globe } from 'lucide-react';
+import { Search, X, Globe } from 'lucide-react';
 
 export default function EC2ElasticIPs() {
   const { state, dispatch, addFlash } = useStore();
@@ -66,7 +66,7 @@ export default function EC2ElasticIPs() {
               <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
               <input className="aws-input pl-7 text-sm w-56" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             <button className="aws-btn aws-btn-secondary text-xs" disabled={selected.length !== 1} onClick={() => { setAssocForm({ allocationId: selected[0], instanceId: '' }); setShowAssociate(true); }}>Associate</button>
             <button className="aws-btn aws-btn-secondary text-xs" disabled={!selected.length} onClick={handleDisassociate}>Disassociate</button>
             <button className="aws-btn aws-btn-secondary text-xs text-red-600" disabled={!selected.length} onClick={handleRelease}>Release</button>

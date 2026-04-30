@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function CloudFrontDistributions() {
@@ -123,7 +123,7 @@ export default function CloudFrontDistributions() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
         <h2 className="font-bold text-lg">Distributions ({distributions.length})</h2>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+          
           <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}>Create distribution</button>
         </div>
       </div>

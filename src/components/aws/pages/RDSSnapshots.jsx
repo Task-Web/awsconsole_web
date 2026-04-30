@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STATUS_COLORS = {
@@ -47,7 +47,7 @@ export default function RDSSnapshots() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Snapshots ({snapshots.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}>Take snapshot</button>
           </div>
         </div>

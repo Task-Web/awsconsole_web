@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus } from 'lucide-react';
 
 export default function VPCSubnets() {
   const { state, dispatch, addFlash } = useStore();
@@ -41,7 +41,7 @@ export default function VPCSubnets() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Subnets ({subnets.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             {selected.length > 0 && <button className="aws-btn aws-btn-secondary text-xs" onClick={handleDelete}>Delete subnet</button>}
             <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}><Plus size={14} className="inline mr-1" />Create subnet</button>
           </div>

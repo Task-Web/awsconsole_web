@@ -80,7 +80,7 @@ export default function LambdaFunctionDetail() {
     }, 1500);
   };
 
-  const tabs = ['Code', 'Test', 'Monitor', 'Configuration', 'Aliases', 'Versions'];
+  const tabs = ['Code', 'Test', 'Configuration'];
 
   return (
     <div className="space-y-4">
@@ -329,9 +329,6 @@ export default function LambdaFunctionDetail() {
         </div>
       )}
 
-      {!['Code', 'Test', 'Configuration'].includes(tab) && (
-        <div className="aws-card text-center text-aws-text-secondary py-8">Feature coming soon</div>
-      )}
     </div>
   );
 }

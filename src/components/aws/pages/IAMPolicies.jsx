@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { Search, RefreshCw, X, ChevronDown } from 'lucide-react';
+import { Search, X, ChevronDown } from 'lucide-react';
 
 export default function IAMPolicies() {
   const { state, dispatch, addFlash } = useStore();
@@ -58,7 +58,7 @@ export default function IAMPolicies() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Policies ({allPolicies.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100 rounded"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             <div className="relative">
               <button className="aws-btn aws-btn-secondary text-xs flex items-center gap-1" disabled={!selected.length}>
                 Policy actions <ChevronDown size={12} />

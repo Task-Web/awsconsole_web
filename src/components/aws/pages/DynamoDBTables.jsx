@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 
 function formatBytes(bytes) {
@@ -58,7 +58,7 @@ export default function DynamoDBTables() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Tables ({tables.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             {selected.length > 0 && <button className="aws-btn aws-btn-secondary text-xs" onClick={handleDelete}>Delete table</button>}
             <button className="aws-btn aws-btn-call-to-action text-xs" onClick={() => setShowCreate(true)}><Plus size={14} className="inline mr-1" />Create table</button>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus } from 'lucide-react';
 
 export default function VPCInternetGateways() {
   const { state, dispatch, addFlash } = useStore();
@@ -55,7 +55,7 @@ export default function VPCInternetGateways() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-aws-border">
           <h2 className="font-bold text-lg">Internet Gateways ({igws.length})</h2>
           <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-gray-100"><RefreshCw size={16} className="text-aws-text-secondary" /></button>
+            
             {selected.length === 1 && (() => {
               const igw = state.vpc.internetGateways.find(i => i.id === selected[0]);
               return igw?.state === 'detached'

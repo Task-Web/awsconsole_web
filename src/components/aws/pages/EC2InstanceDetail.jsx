@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store/StoreContext.jsx';
-import { RefreshCw, ChevronDown, Copy, Check } from 'lucide-react';
+import { ChevronDown, Copy, Check } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STATE_COLORS = {
@@ -111,7 +111,10 @@ export default function EC2InstanceDetail() {
             <div className="text-xs text-aws-text-disabled mt-0.5">Updated less than a minute ago</div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="aws-btn aws-btn-primary text-xs">Connect</button>
+            <button
+              className="aws-btn aws-btn-primary text-xs"
+              onClick={() => addFlash('info', `Use SSH to connect: ssh -i "key.pem" ec2-user@${instance.publicIp !== '-' ? instance.publicIp : instance.privateIp}`)}
+            >Connect</button>
             <div className="relative">
               <button className="aws-btn aws-btn-secondary text-xs flex items-center gap-1" onClick={() => setStateDropdown(!stateDropdown)}>
                 Instance state <ChevronDown size={12} />
@@ -126,9 +129,6 @@ export default function EC2InstanceDetail() {
                 </div>
               )}
             </div>
-            <button className="aws-btn aws-btn-secondary text-xs flex items-center gap-1">
-              Actions <ChevronDown size={12} />
-            </button>
           </div>
         </div>
 

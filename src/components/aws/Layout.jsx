@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, HelpCircle, ChevronDown, ChevronRight, ChevronLeft, X, Server, HardDrive, Database, Zap, Shield, DollarSign, Star, Info, Globe, Activity, BarChart3, Mail, MessageSquare, Layers, Settings, Grid3X3 } from 'lucide-react';
+import { Search, Bell, HelpCircle, ChevronDown, ChevronRight, ChevronLeft, X, Server, HardDrive, Database, Zap, Shield, DollarSign, Star, Info, Globe, Activity, BarChart3, Mail, MessageSquare, Layers, Grid3X3 } from 'lucide-react';
 import { useStore } from './store/StoreContext.jsx';
 import FlashMessages from './FlashMessages';
 
@@ -598,14 +598,15 @@ export default function Layout({ children }) {
           </div>
 
           {/* Help */}
-          <button className="p-2 hover:bg-white/10 transition-colors rounded">
-            <HelpCircle size={16} />
-          </button>
-
-          {/* Settings */}
-          <button className="p-2 hover:bg-white/10 transition-colors rounded">
-            <Settings size={16} />
-          </button>
+          {helpContent && (
+            <button
+              className="p-2 hover:bg-white/10 transition-colors rounded"
+              onClick={() => setInfoOpen(!infoOpen)}
+              title="Help"
+            >
+              <HelpCircle size={16} />
+            </button>
+          )}
 
           {/* Region Selector */}
           <div className="relative" ref={regionRef}>
