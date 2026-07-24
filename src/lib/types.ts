@@ -1,3 +1,5 @@
+import { getDefaultData } from "../components/aws/store/dataManager";
+
 // State metadata - tracks versioning and timestamps
 export interface StateMeta {
   created_at: string;
@@ -36,14 +38,14 @@ export interface StateResponse<T extends Record<string, unknown> = DefaultStateD
   state: UserState<T>;
 }
 
-// Request body for PUT /api/state
+// Full control-plane replacement request
 export interface StateRequest<T extends Record<string, unknown> = Record<string, unknown>> {
   data: T;
   note?: string | null;
   meta?: Partial<StateMeta>;
 }
 
-// Request body for PATCH /api/state
+// Partial control-plane update request
 export interface StatePatchRequest<T extends Record<string, unknown> = Record<string, unknown>> {
   data: Partial<T>;
   note?: string | null;
@@ -65,9 +67,6 @@ export interface InfoResponse {
 }
 
 export function createDefaultStateData(): DefaultStateData {
-  // Import the AWS default data at runtime to avoid circular dependencies
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getDefaultData } = require("@/components/aws/store/dataManager");
   return getDefaultData();
 }
 

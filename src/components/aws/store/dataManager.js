@@ -4,22 +4,6 @@ const BASE_INITIAL_KEY = 'aws_mock_initialState';
 export function storageKey() { return BASE_STORAGE_KEY; }
 export function initialKey() { return BASE_INITIAL_KEY; }
 
-export const buildStateUrl = () => '/api/state';
-
-export const fetchCustomState = async () => {
-  try {
-    const url = buildStateUrl();
-    const response = await fetch(url, {
-      credentials: 'include',
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data?.state?.data) return data.state.data;
-    }
-  } catch { console.log('No custom state available'); }
-  return null;
-};
-
 export const saveState = (state) => {
   localStorage.setItem(storageKey(), JSON.stringify(state));
 };

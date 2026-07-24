@@ -8,7 +8,6 @@ import Placeholder from './pages/Placeholder';
 
 // Core
 import Dashboard from './pages/Dashboard';
-import StateInspector from './pages/StateInspector';
 
 // EC2
 import EC2 from './pages/EC2';
@@ -191,7 +190,6 @@ export default function AwsApp() {
             <Route path="/cloudtrail/event-history" element={<CloudTrailEventHistory />} />
 
             {/* State Inspector */}
-            <Route path="/go" element={<StateInspector />} />
 
             {/* Catch-all */}
             <Route path="*" element={<RedirectWithQuery to="/" />} />
