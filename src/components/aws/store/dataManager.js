@@ -569,6 +569,11 @@ export const getDefaultData = () => ({
   },
 
   // ========================
+  // CloudTrail
+  // ========================
+  cloudtrail: { events: [] },
+
+  // ========================
   // CloudWatch
   // ========================
   cloudwatch: {
